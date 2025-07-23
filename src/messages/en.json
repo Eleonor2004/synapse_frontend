@@ -1,0 +1,12 @@
+{
+  "HomePage": {
+    "title": "Welcome to SYNAPSE",
+    "description": "The modern platform for visualizing and analyzing complex communication networks.",
+    "ctaButton": "Go to Workbench"
+  },
+  "NavBar": {
+    "home": "Home",
+    "about": "About",
+    "help": "Help"
+  }
+}
