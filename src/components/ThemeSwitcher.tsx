@@ -2,11 +2,11 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, Monitor } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function ThemeSwitcher() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   // useEffect only runs on the client, so now we can safely show the UI
@@ -23,14 +23,41 @@ export function ThemeSwitcher() {
     );
   }
 
+  const cycleTheme = () => {
+    if (theme === "light") {
+      setTheme("dark");
+    } else if (theme === "dark") {
+      setTheme("system");
+    } else {
+      setTheme("light");
+    }
+  };
+
+  const getIcon = () => {
+    if (theme === "system") {
+      return <Monitor className="h-[1.2rem] w-[1.2rem]" />;
+    }
+    if (resolvedTheme === "dark") {
+      return <Moon className="h-[1.2rem] w-[1.2rem]" />;
+    }
+    return <Sun className="h-[1.2rem] w-[1.2rem]" />;
+  };
+
+  const getLabel = () => {
+    if (theme === "system") return "System theme";
+    if (theme === "dark") return "Dark theme";
+    if (theme === "light") return "Light theme";
+    return "Toggle theme";
+  };
+
   return (
     <button
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 relative"
-      aria-label="Toggle theme"
+      onClick={cycleTheme}
+      className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors border border-gray-300 dark:border-gray-600"
+      aria-label={getLabel()}
+      title={getLabel()}
     >
-      <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-      <Moon className="absolute top-2 left-2 h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+      {getIcon()}
     </button>
   );
 }

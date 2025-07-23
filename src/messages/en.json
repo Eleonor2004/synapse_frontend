@@ -1,12 +1,166 @@
 {
   "HomePage": {
-    "title": "Welcome to SYNAPSE",
+    "title": "Welcome to SYNAPSSSE",
     "description": "The modern platform for visualizing and analyzing complex communication networks.",
     "ctaButton": "Go to Workbench"
   },
   "NavBar": {
     "home": "Home",
     "about": "About",
-    "help": "Help"
+    "help": "Help",
+    "login": "Login",
+    "logout": "Logout",
+    "dashboard": "Dashboard"
+  },
+  "LoginPage": {
+"title": "Login",
+"description": "Please log in to continue."
+},
+  "LoginForm": {
+    "title": "Welcome Back",
+    "subtitle": "Enter your credentials to access your workbench.",
+    "usernameLabel": "Username",
+    "usernamePlaceholder": "Enter your username",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "submitButton": "Login",
+    "errors": {
+      "invalidCredentials": "Invalid username or password.",
+      "serverError": "Could not connect to the server. Please try again later."
+    }
+  },
+  "HeroSection": {
+    "tagline": "Uncover Hidden Connections. Accelerate Your Investigations.",
+    "description": "SYNAPSE is a high-performance analytics workbench that transforms complex datasets into interactive network graphs, helping you discover critical relationships faster and more accurately.",
+    "cta": "Go to Workbench"
+  },
+  "FeatureList": {
+    "title": "Powerful Features at Your Fingertips",
+    "feature1_title": "Interactive Visualization",
+    "feature1_description": "Explore your data as a dynamic graph. Pan, zoom, and inspect nodes and edges to understand complex networks intuitively.",
+    "feature2_title": "Pathfinding Analysis",
+    "feature2_description": "Instantly find the shortest path between any two entities in your dataset, revealing indirect and often overlooked connections.",
+    "feature3_title": "Advanced Filtering",
+    "feature3_description": "Isolate the data that matters. Filter your graph by time ranges, connection types, and node properties to focus your analysis."
+  },
+  "StatisticsSection": {
+    "title": "Trusted by Analysts Worldwide",
+    "stat1_label": "Connections Analyzed",
+    "stat2_label": "Investigations Supported",
+    "stat3_label": "Users Onboarded"
+  },
+  "NewsletterSection": {
+    "title": "Stay Ahead with SYNAPSE Updates",
+    "description": "Subscribe to our newsletter for the latest feature releases, tips, and case studies.",
+    "placeholder": "Enter your email",
+    "cta": "Subscribe"
+  },
+  "Footer": {
+    "copyright": "© {year} SYNAPSE. All rights reserved."
+  },
+"Workbench": {
+    "ControlSidebar": {
+      "dataSourcesTitle": "Data Sources",
+      "selectDataset": "Select a Dataset",
+      "importDataTitle": "Import New Data",
+      "uploadFile": "Upload a File",
+      "uploadInstructions": "Drag & drop CSV/JSON or click to select",
+      "importButton": "Initiate Import",
+      "filtersTitle": "Filters",
+      "timeRange": "Time Range",
+      "nodeTypes": "Node Types"
+    },
+    "AnalysisToolbar": {
+      "zoomIn": "Zoom In",
+      "zoomOut": "Zoom Out",
+      "pan": "Pan Tool",
+      "shortestPath": "Find Shortest Path"
+    },
+    "DetailsSidebar": {
+      "title": "Details",
+      "noSelection": "Select a node or edge to view its properties.",
+      "properties": "Properties"
+    }
+  },"Dashboard": {
+    "title": "User Dashboard",
+    "tabs": {
+      "profile": "Profile",
+      "settings": "Settings",
+      "history": "History",
+      "statistics": "Statistics",
+      "userManagement": "User Management",
+      "notifications": "Notifications"
+    },
+    "Profile": {
+      "title": "Your Profile",
+      "subtitle": "Manage your personal information and password.",
+      "nameLabel": "Full Name",
+      "emailLabel": "Email Address",
+      "saveButton": "Save Changes"
+    },
+    "Settings": {
+      "title": "Application Settings",
+      "subtitle": "Customize your experience.",
+      "themeTitle": "Theme",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "themeSystem": "System",
+      "languageTitle": "Language"
+    },
+    "History": {
+      "title": "Activity Log",
+      "subtitle": "A log of your recent actions within the application.",
+      "logLogin": "Logged in successfully.",
+      "logAnalysis": "Started new pathfinding analysis.",
+      "logImport": "Imported dataset 'Case #1024'."
+    },
+    "Statistics": {
+      "title": "Usage Statistics",
+      "subtitle": "An overview of your activity.",
+      "analysesRun": "Analyses Run",
+      "nodesExplored": "Nodes Explored",
+      "dataImported": "Datasets Imported",
+      "chartTitle": "Activity Over Last 7 Days"
+    },
+    "UserManagement": {
+      "title": "User Management",
+      "subtitle": "Manage all user accounts in the system.",
+      "adminOnly": "This section is for administrators only.",
+      "addUser": "Add User",
+      "table": {
+        "name": "Name",
+        "email": "Email",
+        "role": "Role",
+        "status": "Status",
+        "actions": "Actions"
+      }
+    },
+    "Notifications": {
+      "title": "Notifications",
+      "subtitle": "Recent system messages and alerts.",
+      "maintenance": "Scheduled maintenance on Sunday at 2 AM.",
+      "update": "New feature 'Graph Export' is now available."
+    },"AboutPageContent": {
+    "title": "About SYNAPSE",
+    "subtitle": "Uncovering connections, empowering investigations.",
+    "section1_title": "Our Mission",
+    "section1_content": "Our mission is to provide investigators and analysts with a powerful, intuitive platform to centralize diverse datasets. By transforming fragmented information into a clear, interactive graph, SYNAPSE helps teams uncover critical relationships faster and more accurately than ever before.",
+    "section2_title": "The Technology",
+    "section2_content": "SYNAPSE is built on a modern, high-performance technology stack. The backend leverages the power of Neo4j for graph data storage and FastAPI for a secure, high-speed API. The frontend is a responsive and dynamic single-page application built with Next.js, React, and TypeScript, styled with Tailwind CSS for a clean and adaptable user interface."
+  },
+  "HelpPageContent": {
+    "title": "Help Center",
+    "subtitle": "Have questions? We're here to help.",
+    "faq_title": "Frequently Asked Questions"
+  },
+  "FAQ": {
+    "q1": "What types of data can I import?",
+    "a1": "SYNAPSE currently supports structured data in CSV and JSON formats. The data should represent entities (like people or organizations) and the interactions between them (like calls, messages, or transactions).",
+    "q2": "Is my data secure?",
+    "a2": "Absolutely. Security is our top priority. All data transmission is encrypted via HTTPS, and our backend enforces strict role-based access control (RBAC) to ensure that only authorized users can access sensitive information.",
+    "q3": "How does the pathfinding analysis work?",
+    "a3": "The pathfinding feature uses powerful algorithms to find the shortest path between any two selected nodes in the graph. This is useful for discovering indirect connections that are not immediately obvious.",
+    "q4": "Can I customize the theme?",
+    "a4": "Yes. You can switch between light and dark themes from your user dashboard. The application can also be set to follow your system's theme preference automatically."
   }
-}
+}}

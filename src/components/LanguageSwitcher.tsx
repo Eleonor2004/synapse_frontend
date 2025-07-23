@@ -1,42 +1,51 @@
-// src/components/LanguageSwitcher.tsx (Alternative approach)
+// src/components/LanguageSwitcher.tsx
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
-import Link from "next/link";
+import { useTransition } from "react";
 
 export function LanguageSwitcher() {
   const pathname = usePathname();
   const locale = useLocale();
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
-  const getLocalizedPath = (newLocale: string) => {
-    // Remove current locale and add new locale
-    const pathWithoutLocale = pathname.replace(`/${locale}`, '') || '/';
-    return `/${newLocale}${pathWithoutLocale === '/' ? '' : pathWithoutLocale}`;
+  const switchLanguage = (newLocale: string) => {
+    if (newLocale === locale) return;
+    
+    startTransition(() => {
+      // Remove current locale from path and add new locale
+      const pathWithoutLocale = pathname.replace(`/${locale}`, '') || '';
+      const newPath = `/${newLocale}${pathWithoutLocale}`;
+      router.push(newPath);
+    });
   };
 
   return (
-    <div className="flex items-center gap-2">
-      <Link
-        href={getLocalizedPath("en")}
-        className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+    <div className="flex items-center gap-1 border border-gray-300 dark:border-gray-600 rounded-md overflow-hidden">
+      <button
+        onClick={() => switchLanguage("en")}
+        disabled={isPending}
+        className={`px-3 py-1 text-sm font-medium transition-colors ${
           locale === 'en' 
-            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
-            : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-        }`}
+            ? 'bg-blue-600 text-white' 
+            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+        } ${isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         EN
-      </Link>
-      <Link
-        href={getLocalizedPath("fr")}
-        className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+      </button>
+      <button
+        onClick={() => switchLanguage("fr")}
+        disabled={isPending}
+        className={`px-3 py-1 text-sm font-medium transition-colors ${
           locale === 'fr' 
-            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
-            : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-        }`}
+            ? 'bg-blue-600 text-white' 
+            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+        } ${isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         FR
-      </Link>
+      </button>
     </div>
   );
 }

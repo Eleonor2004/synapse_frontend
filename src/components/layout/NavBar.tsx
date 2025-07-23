@@ -1,29 +1,40 @@
-// src/components/layout/NavBar.tsx
-import { useTranslations, useLocale } from "next-intl";
-import Link from "next/link";
-import { ThemeSwitcher } from "../ThemeSwitcher";
-import { LanguageSwitcher } from "../LanguageSwitcher";
+import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
-export function NavBar() {
-  const t = useTranslations("NavBar");
-  const locale = useLocale();
+interface NavBarProps {
+  variant?: 'public' | 'workbench';
+}
+
+export const NavBar = ({ variant = 'public' }: NavBarProps) => {
+  const t = useTranslations('NavBar');
 
   return (
-    <header className="border-b border-gray-200 dark:border-gray-700">
-      <div className="container mx-auto px-4 flex justify-between items-center h-16">
-        <Link href={`/${locale}`} className="font-bold text-xl">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
+        <Link href="/" className="text-2xl font-bold text-primary">
           SYNAPSE
         </Link>
-        <nav className="hidden md:flex items-center gap-6">
-          <Link href={`/${locale}`}>{t("home")}</Link>
-          <Link href={`/${locale}/about`}>{t("about")}</Link>
-          <Link href={`/${locale}/help`}>{t("help")}</Link>
+        <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
+          {variant === 'public' ? (
+            <>
+              <Link href="/login" className="text-muted-foreground transition-colors hover:text-primary">{t('login')}</Link>
+              <Link href="/help" className="text-muted-foreground transition-colors hover:text-primary">{t('help')}</Link>
+              <Link href="/about" className="text-muted-foreground transition-colors hover:text-primary">{t('about')}</Link>
+            </>
+          ) : (
+            <>
+              <Link href="/dashboard" className="text-muted-foreground transition-colors hover:text-primary">{t('dashboard')}</Link>
+              <Link href="/" className="text-muted-foreground transition-colors hover:text-primary">{t('logout')}</Link>
+            </>
+          )}
         </nav>
-        <div className="flex items-center gap-4">
-          <LanguageSwitcher />
+        <div className="flex items-center space-x-2">
           <ThemeSwitcher />
+          <LanguageSwitcher />
         </div>
       </div>
     </header>
   );
-}
+};

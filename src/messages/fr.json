@@ -4,9 +4,152 @@
     "description": "La plateforme moderne pour visualiser et analyser les réseaux de communication complexes.",
     "ctaButton": "Aller à l'Atelier"
   },
-  "NavBar": {
+  "NavBar": { 
     "home": "Accueil",
-    "about": "À Propos",
-    "help": "Aide"
+    "login": "Connexion",
+    "help": "Aide", 
+    "about": "À Propos", 
+    "logout": "Déconnexion", "dashboard": "Tableau de Bord" }, 
+    "HeroSection": { 
+      "tagline": "Révélez les Connexions Cachées. Accélérez Vos Enquêtes.",
+       "description": "SYNAPSE est un atelier d'analyse haute performance qui transforme des ensembles de données complexes en graphes interactifs, vous aidant à découvrir des relations critiques plus rapidement et avec plus de précision.", 
+       "cta": "Aller à l'Atelier" },
+        "FeatureList": { 
+          "title": "Des Fonctionnalités Puissantes à Votre Portée",
+          "feature1_title": "Visualisation Interactive",
+           "feature1_description": "Explorez vos données sous forme de graphe dynamique. Naviguez, zoomez et inspectez les nœuds et les arêtes pour comprendre intuitivement les réseaux complexes.", 
+           "feature2_title": "Analyse de Chemin", 
+           "feature2_description": "Trouvez instantanément le chemin le plus court entre deux entités, révélant des connexions indirectes et souvent négligées.", 
+           "feature3_title": "Filtrage Avancé", 
+           "feature3_description": "Isolez les données pertinentes. Filtrez votre graphe par plages de dates, types de connexion et propriétés des nœuds pour cibler votre analyse." }, 
+           "StatisticsSection": { "title": "Approuvé par les Analystes du Monde Entier", 
+           "stat1_label": "Connexions Analysées", 
+           "stat2_label": "Enquêtes Soutenues", 
+           "stat3_label": "Utilisateurs Intégrés" }, 
+           "NewsletterSection": { "title": "Restez à la Pointe avec les Mises à Jour SYNAPSE",
+            "description": "Abonnez-vous à notre newsletter pour les dernières fonctionnalités, astuces et études de cas.", 
+            "placeholder": "Entrez votre email", 
+            "cta": "S'abonner" }, 
+            "Footer": { "copyright": "© {year} SYNAPSE. Tous droits réservés." },
+   "LoginPage": {
+    "title": "Connexion",
+    "description": "Veuillez vous connecter pour continuer."
+  },
+  "LoginForm": {
+    "title": "Bon Retour",
+    "subtitle": "Entrez vos identifiants pour accéder à votre atelier.",
+    "usernameLabel": "Nom d'utilisateur",
+    "usernamePlaceholder": "Entrez votre nom d'utilisateur",
+    "passwordLabel": "Mot de passe",
+    "passwordPlaceholder": "Entrez votre mot de passe",
+    "submitButton": "Connexion",
+    "errors": {
+      "invalidCredentials": "Nom d'utilisateur ou mot de passe invalide.",
+      "serverError": "Impossible de se connecter au serveur. Veuillez réessayer plus tard."
+    }
+  },"Workbench": {
+    "ControlSidebar": {
+      "dataSourcesTitle": "Sources de Données",
+      "selectDataset": "Sélectionner un jeu de données",
+      "importDataTitle": "Importer de Nouvelles Données",
+      "uploadFile": "Téléverser un Fichier",
+      "uploadInstructions": "Glissez-déposez un CSV/JSON ou cliquez pour sélectionner",
+      "importButton": "Lancer l'Importation",
+      "filtersTitle": "Filtres",
+      "timeRange": "Plage de Temps",
+      "nodeTypes": "Types de Nœuds"
+    },
+    "AnalysisToolbar": {
+      "zoomIn": "Zoom Avant",
+      "zoomOut": "Zoom Arrière",
+      "pan": "Outil Panoramique",
+      "shortestPath": "Trouver le Chemin le Plus Court"
+    },
+    "DetailsSidebar": {
+      "title": "Détails",
+      "noSelection": "Sélectionnez un nœud ou une arête pour voir ses propriétés.",
+      "properties": "Propriétés"
+    },"Dashboard": {
+    "title": "Tableau de Bord Utilisateur",
+    "tabs": {
+      "profile": "Profil",
+      "settings": "Paramètres",
+      "history": "Historique",
+      "statistics": "Statistiques",
+      "userManagement": "Gestion des Utilisateurs",
+      "notifications": "Notifications"
+    },
+    "Profile": {
+      "title": "Votre Profil",
+      "subtitle": "Gérez vos informations personnelles et votre mot de passe.",
+      "nameLabel": "Nom Complet",
+      "emailLabel": "Adresse E-mail",
+      "saveButton": "Enregistrer les Modifications"
+    },
+    "Settings": {
+      "title": "Paramètres de l'Application",
+      "subtitle": "Personnalisez votre expérience.",
+      "themeTitle": "Thème",
+      "themeLight": "Clair",
+      "themeDark": "Sombre",
+      "themeSystem": "Système",
+      "languageTitle": "Langue"
+    },
+    "History": {
+      "title": "Journal d'Activité",
+      "subtitle": "Un journal de vos actions récentes dans l'application.",
+      "logLogin": "Connexion réussie.",
+      "logAnalysis": "Nouvelle analyse de chemin lancée.",
+      "logImport": "Jeu de données 'Cas #1024' importé."
+    },
+    "Statistics": {
+      "title": "Statistiques d'Utilisation",
+      "subtitle": "Un aperçu de votre activité.",
+      "analysesRun": "Analyses Effectuées",
+      "nodesExplored": "Nœuds Explorés",
+      "dataImported": "Jeux de Données Importés",
+      "chartTitle": "Activité des 7 Derniers Jours"
+    },
+    "UserManagement": {
+      "title": "Gestion des Utilisateurs",
+      "subtitle": "Gérez tous les comptes utilisateurs du système.",
+      "adminOnly": "Cette section est réservée aux administrateurs.",
+      "addUser": "Ajouter un Utilisateur",
+      "table": {
+        "name": "Nom",
+        "email": "E-mail",
+        "role": "Rôle",
+        "status": "Statut",
+        "actions": "Actions"
+      }
+    },
+    "Notifications": {
+      "title": "Notifications",
+      "subtitle": "Messages système et alertes récents.",
+      "maintenance": "Maintenance planifiée dimanche à 2h du matin.",
+      "update": "La nouvelle fonctionnalité 'Export de Graphe' est disponible."
+    }
+  },"AboutPageContent": {
+    "title": "À Propos de SYNAPSE",
+    "subtitle": "Révéler les connexions, renforcer les enquêtes.",
+    "section1_title": "Notre Mission",
+    "section1_content": "Notre mission est de fournir aux enquêteurs et analystes une plateforme puissante et intuitive pour centraliser divers ensembles de données. En transformant des informations fragmentées en un graphe clair et interactif, SYNAPSE aide les équipes à découvrir des relations critiques plus rapidement et avec plus de précision que jamais.",
+    "section2_title": "La Technologie",
+    "section2_content": "SYNAPSE est construit sur une pile technologique moderne et performante. Le backend exploite la puissance de Neo4j pour le stockage des données graphiques et FastAPI pour une API sécurisée et rapide. Le frontend est une application monopage réactive et dynamique construite avec Next.js, React et TypeScript, stylisée avec Tailwind CSS pour une interface utilisateur propre et adaptable."
+  },
+  "HelpPageContent": {
+    "title": "Centre d'Aide",
+    "subtitle": "Vous avez des questions ? Nous sommes là pour vous aider.",
+    "faq_title": "Foire Aux Questions"
+  },
+  "FAQ": {
+    "q1": "Quels types de données puis-je importer ?",
+    "a1": "SYNAPSE prend actuellement en charge les données structurées aux formats CSV et JSON. Les données doivent représenter des entités (comme des personnes ou des organisations) et les interactions entre elles (comme des appels, des messages ou des transactions).",
+    "q2": "Mes données sont-elles sécurisées ?",
+    "a2": "Absolument. La sécurité est notre priorité absolue. Toute transmission de données est chiffrée via HTTPS, et notre backend applique un contrôle d'accès strict basé sur les rôles (RBAC) pour garantir que seuls les utilisateurs autorisés peuvent accéder aux informations sensibles.",
+    "q3": "Comment fonctionne l'analyse de chemin ?",
+    "a3": "La fonctionnalité de recherche de chemin utilise des algorithmes puissants pour trouver le chemin le plus court entre deux nœuds sélectionnés dans le graphe. C'est utile pour découvrir des connexions indirectes qui ne sont pas immédiatement évidentes.",
+    "q4": "Puis-je personnaliser le thème ?",
+    "a4": "Oui. Vous pouvez basculer entre les thèmes clair et sombre depuis votre tableau de bord utilisateur. L'application peut également être configurée pour suivre automatiquement les préférences de thème de votre système."
   }
-}
+}}
