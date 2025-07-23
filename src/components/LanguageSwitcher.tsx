@@ -1,29 +1,24 @@
-// src/components/LanguageSwitcher.tsx
+// src/components/LanguageSwitcher.tsx (Alternative approach)
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useLocale } from "next-intl";
+import Link from "next/link";
 
 export function LanguageSwitcher() {
-  const router = useRouter();
   const pathname = usePathname();
   const locale = useLocale();
 
-  const switchLocale = (nextLocale: string) => {
-    // Handle root path specially
-    if (pathname === `/${locale}`) {
-      router.replace(`/${nextLocale}`);
-    } else {
-      // Replace the locale part of the path
-      const newPath = pathname.replace(`/${locale}`, `/${nextLocale}`);
-      router.replace(newPath);
-    }
+  const getLocalizedPath = (newLocale: string) => {
+    // Remove current locale and add new locale
+    const pathWithoutLocale = pathname.replace(`/${locale}`, '') || '/';
+    return `/${newLocale}${pathWithoutLocale === '/' ? '' : pathWithoutLocale}`;
   };
 
   return (
     <div className="flex items-center gap-2">
-      <button
-        onClick={() => switchLocale("en")}
+      <Link
+        href={getLocalizedPath("en")}
         className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
           locale === 'en' 
             ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
@@ -31,9 +26,9 @@ export function LanguageSwitcher() {
         }`}
       >
         EN
-      </button>
-      <button
-        onClick={() => switchLocale("fr")}
+      </Link>
+      <Link
+        href={getLocalizedPath("fr")}
         className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
           locale === 'fr' 
             ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
@@ -41,7 +36,7 @@ export function LanguageSwitcher() {
         }`}
       >
         FR
-      </button>
+      </Link>
     </div>
   );
 }
