@@ -1,11 +1,11 @@
-// components/layout/NavBar.tsx
-//import { useTranslations } from "next-intl";
+// src/components/layout/NavBar.tsx
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ThemeSwitcher } from "../ThemeSwitcher";
 import { LanguageSwitcher } from "../LanguageSwitcher";
 
 export function NavBar() {
-  //const t = useTranslations("NavBar");
+  const t = useTranslations("NavBar");
 
   return (
     <header className="border-b border-gray-200 dark:border-gray-700">
@@ -14,12 +14,12 @@ export function NavBar() {
           SYNAPSE
         </Link>
         <nav className="hidden md:flex items-center gap-6">
-          <Link href="/">{("home")}</Link>
-          <Link href="/about">{("about")}</Link>
-          <Link href="/help">{("help")}</Link>
+          <Link href="/">{t("home")}</Link>
+          <Link href="/about">{t("about")}</Link>
+          <Link href="/help">{t("help")}</Link>
         </nav>
         <div className="flex items-center gap-4">
-          
+          <LanguageSwitcher />
           <ThemeSwitcher />
         </div>
       </div>

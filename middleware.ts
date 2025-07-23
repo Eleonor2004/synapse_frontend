@@ -8,6 +8,6 @@ export default createMiddleware({
  
 export const config = {
   // Match only internationalized pathnames
-  // The '/' is crucial to catch the root domain
-  matcher: ['/', '/(fr|en)/:path*']
+  // Remove the root '/' from matcher since we want the middleware to handle it
+  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)']
 };

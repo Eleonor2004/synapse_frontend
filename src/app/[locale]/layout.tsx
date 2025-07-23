@@ -5,14 +5,25 @@ import { getMessages } from "next-intl/server";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { NavBar } from "@/components/layout/NavBar";
 
+// Generate static params for the supported locales
+export function generateStaticParams() {
+  return [
+    { locale: 'en' },
+    { locale: 'fr' }
+  ];
+}
+
 export default async function LocaleLayout({
   children,
-  params: { locale },
+  params,
 }: {
   children: React.ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }) {
-  // This line was causing the error, but we will make it work now.
+  // Await the params to get the locale
+  const { locale } = await params;
+  
+  // Let next-intl handle the locale automatically
   const messages = await getMessages();
 
   return (
