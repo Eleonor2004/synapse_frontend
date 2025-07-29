@@ -1,8 +1,8 @@
 // src/app/[locale]/layout.tsx
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
-import { ThemeProvider } from "@/providers/ThemeProvider";
-import { NavBar } from "@/components/layout/NavBar";
+import { ThemeProvider } from "../../providers/ThemeProvider";
+import { NavBar } from "../../components/layout/NavBar";
 import { notFound } from "next/navigation";
 import "../globals.css"; // Import global styles
 
