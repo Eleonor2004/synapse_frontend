@@ -142,17 +142,7 @@ export default function WorkbenchPage() {
           /* Upload Section */
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="w-full max-w-2xl">
-              <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r from-primary to-secondary mb-4">
-                  <Upload className="w-8 h-8 text-white" />
-                </div>
-                <h2 className="text-2xl font-bold text-foreground mb-2">
-                  Upload Your Data
-                </h2>
-                <p className="text-muted-foreground">
-                  Upload an Excel file (.xlsx) or ZIP archive containing communication data
-                </p>
-              </div>
+    
               
               <FileUploader 
                 onUpload={handleFileUpload}

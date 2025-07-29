@@ -71,16 +71,16 @@ Some components have been designed for the workbench already dont go from scratc
 Please help me progressively:
 
 1. Start by analyzing the repo and then we focus on the workbench.
-2. Build the components that will makeup the workbech
+2. Build the components that will makeup the workbech and ameliorate the existing ones
 3. Build a functional Workbench ans then test to ameliorate
 4. Tackle each page one-by-one, to ameliorate design: Home
 5. Ensure everything is **clean, readable, and modular.**
 
 ---
 
-### 🧵 Project context
+### 🧵 Github repository
 
-This is my project context that you should explore and it is from here that we will advancing in order not to redo things already done
+This is my Github repository that is attched to the prompt
 
 ---
 
