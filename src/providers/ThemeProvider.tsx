@@ -8,11 +8,13 @@ import { type ThemeProviderProps } from "next-themes/dist/types";
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
   return (
     <NextThemesProvider 
+      attribute="data-theme"
+      defaultTheme="system"
+      enableSystem={true}
+      disableTransitionOnChange={false}
+      storageKey="synapse-theme"
+      themes={['light', 'dark', 'system']}
       {...props}
-      // Force re-render on theme change
-      forcedTheme={undefined}
-      // Ensure the theme is applied correctly
-      enableColorScheme={false}
     >
       {children}
     </NextThemesProvider>

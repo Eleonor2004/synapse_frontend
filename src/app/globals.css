@@ -1,56 +1,329 @@
-
 @import "tailwindcss";
-/* 
-  Définition des variables de couleur pour le thème clair (par défaut)
-  Basé sur le design "Pokket".
-*/
+
+/* Custom Properties for SYNAPSE Design System */
 :root {
-  --background: 255 255 255; /* #FFFFFF */
-  --foreground: 2 8 23;     /* #020817 - Texte principal (noir) */
-
-  --card: 255 255 255;
-  --card-foreground: 2 8 23;
-
-  --primary: 79 70 229;      /* #4F46E5 - Violet/Indigo pour les accents */
-  --primary-foreground: 255 255 255; /* Texte blanc sur les accents */
-
-  --muted: 241 245 249;      /* #F1F5F9 - Gris très clair pour fonds discrets */
-  --muted-foreground: 90 90 90; /* #5A5A5A - Texte secondaire */
-
-  --border: 226 232 240;     /* #E2E8F0 - Bordures claires */
-  --input: 226 232 240;
+  /* Primary Brand Colors */
+  --primary-dark: #1e0546;
+  --primary-light: #8e43ff;
+  --primary-gradient: linear-gradient(135deg, #1e0546 0%, #8e43ff 100%);
+  
+  /* Light Theme */
+  --background: #ffffff;
+  --foreground: #0f0f23;
+  --card: #ffffff;
+  --card-foreground: #0f0f23;
+  --popover: #ffffff;
+  --popover-foreground: #0f0f23;
+  --muted: #f8fafc;
+  --muted-foreground: #64748b;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #8e43ff;
+  --radius: 0.75rem;
+  
+  /* Semantic Colors */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(30, 5, 70, 0.05);
+  --shadow: 0 4px 6px -1px rgba(30, 5, 70, 0.1), 0 2px 4px -1px rgba(30, 5, 70, 0.06);
+  --shadow-md: 0 10px 15px -3px rgba(30, 5, 70, 0.1), 0 4px 6px -2px rgba(30, 5, 70, 0.05);
+  --shadow-lg: 0 20px 25px -5px rgba(30, 5, 70, 0.1), 0 10px 10px -5px rgba(30, 5, 70, 0.04);
+  --shadow-xl: 0 25px 50px -12px rgba(30, 5, 70, 0.25);
+  
+  /* Glassmorphism */
+  --glass-bg: rgba(255, 255, 255, 0.25);
+  --glass-border: rgba(255, 255, 255, 0.18);
+  --glass-backdrop: blur(16px);
 }
 
-/* 
-  Définition des variables de couleur pour le thème sombre.
-  S'active lorsque l'élément <html> a la classe ".dark".
-*/
-.dark {
-  --background: 30 27 58;    /* #1E1B3A - Violet très sombre */
-  --foreground: 255 255 255; /* Texte principal (blanc) */
-
-  --card: 45 42 90;          /* #2D2A5A - Fond des cartes/conteneurs */
-  --card-foreground: 255 255 255;
-
-  --primary: 255 255 255;      /* Le bouton devient blanc */
-  --primary-foreground: 30 27 58; /* Le texte du bouton devient violet foncé */
-
-  --muted: 45 42 90;
-  --muted-foreground: 161 161 170; /* #A1A1AA - Texte secondaire gris clair */
-
-  --border: 45 42 90;
-  --input: 45 42 90;
+/* Dark Theme */
+[data-theme="dark"] {
+  --background: #0a0a0f;
+  --foreground: #f8fafc;
+  --card: #1a1a2e;
+  --card-foreground: #f8fafc;
+  --popover: #1a1a2e;
+  --popover-foreground: #f8fafc;
+  --muted: #16213e;
+  --muted-foreground: #94a3b8;
+  --border: #2d3748;
+  --input: #2d3748;
+  --ring: #8e43ff;
+  
+  /* Dark Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  
+  /* Dark Glassmorphism */
+  --glass-bg: rgba(26, 26, 46, 0.4);
+  --glass-border: rgba(142, 67, 255, 0.2);
 }
 
-/* Styles de base appliqués au body */
-body {
-  background-color: rgb(var(--background));
-  color: rgb(var(--foreground));
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif; /* Ajout de Geist comme police principale */
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-/* Style de base pour les bordures */
+/* Global Styles */
 * {
-  border-color: rgb(var(--border));
+  border-color: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  line-height: 1.6;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Smooth Scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--muted);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-light);
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-dark);
+}
+
+/* Utility Classes */
+.glass-morphism {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop);
+  border: 1px solid var(--glass-border);
+}
+
+.gradient-text {
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-bg {
+  background: var(--primary-gradient);
+}
+
+.shadow-brand {
+  box-shadow: 0 10px 30px rgba(142, 67, 255, 0.3);
+}
+
+.shadow-brand-lg {
+  box-shadow: 0 20px 60px rgba(142, 67, 255, 0.4);
+}
+
+/* Animation Classes */
+.fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.slide-up {
+  animation: slideUp 0.8s ease-out forwards;
+}
+
+.scale-in {
+  animation: scaleIn 0.5s ease-out forwards;
+}
+
+.float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.pulse-brand {
+  animation: pulseBrand 2s ease-in-out infinite;
+}
+
+/* Keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulseBrand {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(142, 67, 255, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(142, 67, 255, 0);
+  }
+}
+
+/* Focus States */
+.focus-visible:focus-visible {
+  outline: 2px solid var(--primary-light);
+  outline-offset: 2px;
+}
+
+/* Typography Enhancements */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+/* Interactive Elements */
+.btn-primary {
+  background: var(--primary-gradient);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius);
+  font-weight: 600;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn-primary:hover::before {
+  left: 100%;
+}
+
+/* Card Components */
+.card-modern {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-modern:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.card-glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  transition: all 0.3s ease;
+}
+
+/* Navigation Enhancements */
+.nav-link {
+  position: relative;
+  padding: 0.5rem 1rem;
+  transition: all 0.3s ease;
+  color: var(--foreground);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: var(--primary-gradient);
+  transition: all 0.3s ease;
+  transform: translateX(-50%);
+}
+
+.nav-link:hover::after,
+.nav-link.active::after {
+  width: 100%;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .glass-morphism {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  html {
+    scroll-behavior: auto;
+  }
 }
