@@ -14,10 +14,6 @@ I have already:
 
 Now, I want you to help me:
 
----
-### 🎨 **0. Fix the theme switcher component**
-Its not actually working, before i added tailwind css it was working but since then when i click ont it nothing changes, it simply adopts the system's thme, i want you to fix it so that i can easily move from light theme to dark theme
-
 ### 🎨 **1. Revamp the Entire UI/UX**
 
 I want a **professional-grade** look and feel, like on the best modern web apps.
@@ -50,40 +46,8 @@ I want a **professional-grade** look and feel, like on the best modern web apps.
 
 ---
 
-### 🔄 **2. Fix Functional Problems**
-
-#### a. Theme Switcher not working
-
-* Only dark mode is showing (likely due to system default).
-* Clicking the ThemeSwitcher on the Navbar doesn’t change themes.
-* I want a **manual toggle** that overrides system mode.
-
-#### b. i18n Issues
-
-* Some pages (`Help`, `About`, `Dashboard`) don’t display translation messages properly.
-* Ensure all pages render i18n messages correctly.
-
----
-
-### 🧭 **3. Navbar Improvements**
-
-Design and functionality:
-
-* Left side:Name of application (SYNAPSE)
-* Center side:
-
-  * `Home`, `Workbench`, `About`, `Help` links
-* Right side:
-
-  * `ThemeSwitcher` (manual toggle)
-  * `LanguageSwitcher` (between `en`, `fr`, `es`)
-  * If user is **authenticated**: Show `Dashboard` link with icon + user name
-  * Else: Show `Login` link with icon
-
-Design expectations:
-
-* Responsive mobile dropdown menu
-* Sticky top navigation with scroll animation (shrink on scroll, etc.)
+### 🔄 **2. Ameliorate the light theme**
+It does not actually look like a white theme, i still see much of darkblue, and for some components that go white the writings remain grey which is not very visible on white
 
 ---
 
@@ -112,12 +76,9 @@ Design expectations:
 
 Please help me progressively:
 
-1. Start by analyzing the repo and setting up the design system.
-2. Refactor the Navbar with full functionality and styles .
-3. Fix the theme and i18n problems.
-4. Tackle each page one-by-one, enhancing visuals and structure.
-5. Ensure everything is **clean, readable, and modular.**
-
+1. Ameliorate the components of the Home page and make the move to another level with smooth animations like the home pag of Github, canva, tailwind 
+2. Go through the globals.css to fix the light theme althrough the app
+After this we will be moving to the next pages
 ---
 
 ### 🧵 GitHub Repository

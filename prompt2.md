@@ -52,6 +52,10 @@ The component requires columns for:
 • Date (e.g., Date Début appel)" for the LocationGraph and this for the NetworkGraph : "No Network Data Found
 Could not find valid interaction data in the provided file. The component tried to process the data but couldn't identify valid caller-recipient pairs.
 
+Debug Information:
+
+No valid nodes created. Processed: 0, Skipped: 127. Row 1: Missing caller (null) or recipient (null); Row 2: Missing caller (null) or recipient (null); Row 3: Missing caller (null) or recipient (null); Row 4: Missing caller (null) or recipient (null); Row 5: Missing caller (null) or recipient (null)
+
 Expected data structure:
 
 • Caller Number (e.g., "Numéro Appelant", "650589893")
@@ -59,7 +63,16 @@ Expected data structure:
 • Call Date (e.g., "Date Début appel")
 • Duration/Type (e.g., "Durée appel", "SMS")
 • IMEI (Optional)
-• Location (Optional)"
+• Location (Optional)
+The component expects a sheet named "Listing" with the following columns:
+
+Numéro Appelant
+Localisation numéro appelant (Longitude, Latitude)
+IMEI numéro appelant (optional)
+Date Début appel
+Durée appel
+Numéro appelé
+Range: A1:F1"
 
 The component expects a sheet named "Listing" with the following columns:
 
