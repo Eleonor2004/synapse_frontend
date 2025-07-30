@@ -1,5 +1,5 @@
 
-Hi Claude!You are an expert in web development even one of the best specialized in nestjs with tailwind css and typescript and an amazinf UI/UX that has made one of the best ranked designed web pages in the world.  I'm working on a **Next.js project** with type script and tailwind css already configured, and I want your help to **seriously level up the design and polish** of my entire app. Here’s the full scope of what I need help with, progressively:
+Hi Claude!You are an expert in web development even one of the best specialized in nestjs with tailwind css and typescript and an amazinf UI/UX that has made one of the best ranked designed web pages in the world.  I'm working on a **Next.js project** with type script and tailwind css already configured, and I want your help me build the core page of my application: a functional workbench to view interactions between individuals from their listings and location graph. Here’s the full scope of what I need help with, progressively:
 
 ---
 
@@ -15,35 +15,8 @@ I have already:
 
 Now, I want you to help me:
 
-### 🎨 **1. all components you design should be for good Entire UI/UX: focus only on the Workbench components**
 
-I want a **professional-grade** look and feel, like on the best modern web apps.
-
-* ⚡ **The entire web application must have a unique, modern design not look like a generated application**
-
-  * Use **engaging layouts**, **modern fonts**, **shadow depth**, **interactive hover effects**, etc.
-  * Make use of the colors i want on my site and they should be generally configured in the globals.css if there ar updates to be done there do so/ I want these two colors to be really present on my website:  #1e0546 and #8e43ff for the light and as well as the dark themes: on buttons, titles, components...
-  * Introduce nice and smooth animations and transitions, components should have interestin dynamic components for user to continue having the envy to keep on scrolling on each page and especially on the home page
-
-* 🎨 **Responsive Design**
-
-  * Mobile, tablet and desktop optimized.
-  * Adaptable grids, well-aligned spacing, and components that reflow smartly.
-
-* 🌈 **Color Scheme**
-
-  * Not monotonous or boring with the two colors mentionnend above actively present and configured in the globals.css.
-  * Should work across both **light and dark** modes.
-
-* ✨ **Animations and Transitions**
-
-  * Smooth transitions between pages (e.g. `framer-motion`, CSS transitions).
-  * Animated elements like buttons, cards, modals, etc.
- * Follow modern design trends (Neumorphism, Glassmorphism, Material, or Minimal — suggest what's best).
-
----
-
-### 🔄 **2. Build a functional workbench**
+### 🔄 ** Build a functional workbench**
 I want the workbench to be be well designed and do all the task to be done, with responsive.we will use libairies such as vis.js, D3.js for the grapphs.  It is the core of our application. So it should be really well done:
  * We should import excel files with extension .xlsx, or extract those files from a zip or from a folder. and verify that this excel file has the following sheets within it: "Abonné", "Listing", "Fréquence par cellule", "Fréquence Correspondant", "Fréquence par Durée appel", "Fréquence par IMEI", "Identification des abonnés"
  * After the import a message will be displayed about the import if it failed, or if it was successful, so you will create a component for that that will display that message at the top right of screen and will be used althrouh the app, the color used should be indicative of the type of message: warning, info, success, failure ...
@@ -70,10 +43,10 @@ Some components have been designed for the workbench already dont go from scratc
 
 Please help me progressively:
 
-1. Start by analyzing the repo and then we focus on the workbench.
-2. Build the components that will makeup the workbech and ameliorate the existing ones
-3. Build a functional Workbench ans then test to ameliorate
-4. Tackle each page one-by-one, to ameliorate design: Home
+1. Review the component FileUploader to make it more robust in acepting documents 
+2. Build a good NetworkGraph component that will proper ly diplay the nodes the edges with the desired requirements mentioned above using D3.js or vis.js: the most adequate one that will be capble of viewing evne 50listings at the time
+3. Build the LocationGraph component
+4. Make the Workbench page to be really complete and all functional
 5. Ensure everything is **clean, readable, and modular.**
 
 ---
@@ -81,7 +54,7 @@ Please help me progressively:
 ### 🧵 Github repository
 
 This is my Github repository that is attched to the prompt
-
+Most components have been designed already but when i upload a file athat has the required structure and sheet it fails at the validation of the sheet structure
 ---
 
 I want the work on the workbech to be done progressively given that it is arduous and we test it progressively, and only when i validate a tash that we move to the next. Let me know if you need environment variables or authentication details to test logged-in logic. Also feel free to suggest packages that improve UX (e.g. Framer Motion, ShadCN UI, React Icons).
