@@ -43,11 +43,12 @@ Some components have been designed for the workbench already dont go from scratc
 
 Please help me progressively:
 
-1. Review the component FileUploader to make it more robust in acepting documents 
-2. Build a good NetworkGraph component that will proper ly diplay the nodes the edges with the desired requirements mentioned above using D3.js or vis.js: the most adequate one that will be capble of viewing evne 50listings at the time
-3. Build the LocationGraph component
-4. Make the Workbench page to be really complete and all functional
-5. Ensure everything is **clean, readable, and modular.**
+1. Review the component LocationGraph such that it is really functional and add it to Workbench page
+2. Develop the accessory components such as FilterPanel and NodeInformations to make this workbench really complete and add them to the workbech page, and amelioration the Notification component
+3. Review the existing  NetworkGraph component such that it will proper ly diplay the nodes the edges with the desired requirements mentioned above using D3.js or vis.js: the most adequate one that will be capble of viewing evne 50listings at the time. The version I have simply displays No Network data after upload of food file
+4. Build the LocationGraph component
+5. Make the Workbench page to be really complete and all functional
+6. Ensure everything is **clean, readable, and modular.**
 
 ---
 

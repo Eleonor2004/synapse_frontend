@@ -1,4 +1,3 @@
-// src/components/ui/Notification.tsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -38,7 +37,7 @@ export function useNotifications() {
     type: NotificationType,
     title: string,
     message: string,
-    duration: number = 5000
+    duration: number = 30000 // Default duration set to 30 seconds
   ) => {
     const id = Date.now().toString() + Math.random();
     setNotifications(prev => [...prev, { id, type, title, message, duration }]);
@@ -57,7 +56,7 @@ interface NotificationProps {
 }
 
 function Notification({ notification, onClose }: NotificationProps) {
-  const { id, type, title, message, duration = 5000 } = notification;
+  const { id, type, title, message, duration = 30000 } = notification;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -86,7 +85,7 @@ function Notification({ notification, onClose }: NotificationProps) {
       initial={{ opacity: 0, y: 50, scale: 0.5 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, x: 100, scale: 0.8, transition: { duration: 0.3, ease: 'easeIn' } }}
-      className={`relative w-full max-w-sm p-4 overflow-hidden border rounded-2xl shadow-2xl backdrop-blur-xl ${colorMap[type]}`}
+      className={`relative w-full max-w-md p-4 overflow-hidden border rounded-2xl shadow-2xl backdrop-blur-xl ${colorMap[type]}`}
     >
       <div className="flex items-start">
         <div className="flex-shrink-0">{iconMap[type]}</div>
@@ -128,7 +127,7 @@ interface NotificationContainerProps {
  */
 export function NotificationContainer({ notifications, removeNotification }: NotificationContainerProps) {
   return (
-    <div className="fixed top-0 right-0 p-4 sm:p-6 space-y-4 z-[100]">
+    <div className="fixed top-0 right-0 p-4 sm:p-6 space-y-4 z-[9999]">
       <AnimatePresence>
         {notifications.map((notification) => (
           <Notification
