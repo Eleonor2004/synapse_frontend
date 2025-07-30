@@ -1,5 +1,5 @@
 
-Hi Claude!You are an expert in web development even one of the best specialized in nestjs with tailwind css and typescript and an amazinf UI/UX that has made one of the best ranked designed web pages in the world.  I'm working on a **Next.js project** with type script and tailwind css already configured, and I want your help me build the core page of my application: a functional workbench to view interactions between individuals from their listings and location graph. Here’s the full scope of what I need help with, progressively:
+Hi Claude!You are an expert in web development even one of the best specialized in nestjs with tailwind css and typescript and an amazinf UI/UX that has made one of the best ranked designed web pages in the world.  I'm working on a **Next.js project** with type script and tailwind css already configured, and I want your help me make function properly the core page of my application: a functional workbench to view interactions between individuals from their listings and location graph. Here’s the full scope of what I need help with, progressively:
 
 ---
 
@@ -40,15 +40,64 @@ Some components have been designed for the workbench already dont go from scratc
 ---
 
 ### 🧠 Execution Instructions
+I am working with  React components called NetworkGraph and LocationGraph that displays interactions between individuals based on Excel file input. Currently, I encounter this error:
 
+"No Location Data Found
+Could not find valid location data in the file. Please ensure the file contains the necessary columns.
+
+The component requires columns for:
+
+• Caller Number (e.g., Numéro Appelant)
+• Location (e.g., Localisation numéro appelant (Longitude, Latitude))
+• Date (e.g., Date Début appel)" for the LocationGraph and this for the NetworkGraph : "No Network Data Found
+Could not find valid interaction data in the provided file. The component tried to process the data but couldn't identify valid caller-recipient pairs.
+
+Expected data structure:
+
+• Caller Number (e.g., "Numéro Appelant", "650589893")
+• Recipient Number (e.g., "Numéro appelé", "659789768")
+• Call Date (e.g., "Date Début appel")
+• Duration/Type (e.g., "Durée appel", "SMS")
+• IMEI (Optional)
+• Location (Optional)"
+
+The component expects a sheet named "Listing" with the following columns:
+
+Numéro Appelant
+
+Localisation numéro appelant (Longitude, Latitude)
+
+IMEI numéro appelant (optional)
+
+Date Début appel
+
+Durée appel
+
+Numéro appelé
+
+Range: A1:F1
+
+Please thoroughly analyze the code I provide and perform the following:
+
+Identify all possible causes of the "No Network Data Found" error (such as issues in parsing, sheet structure, case sensitivity, data format mismatches, etc.).
+
+Modify the logic of the component to:
+
+Support dynamic or differently structured Excel sheets, as long as the essential columns mentioned above are present.
+
+Be more robust, tolerant to slight variations in headers, and resilient to common data inconsistencies (e.g. extra spaces, missing optional fields).
+
+Correct any bugs and enhance the logic so that the component correctly parses, processes, and visualizes the data from the Excel sheet.
+
+Return to me the fully corrected and working components code that I can copy and use directly.
+
+I have already spent more than two hours trying to fix this, so please be meticulous and detailed in your corrections. Here is the full code
 Please help me progressively:
 
-1. Review the component LocationGraph such that it is really functional and add it to Workbench page
+1. Review the components NetworkGraph and LocationGraph such that it is really functional and add it to Workbench page, I have already spent a whole day trying to make it function so please i really need you ti focus, examine the code meticulously and do proper corrections for it to work
 2. Develop the accessory components such as FilterPanel and NodeInformations to make this workbench really complete and add them to the workbech page, and amelioration the Notification component
-3. Review the existing  NetworkGraph component such that it will proper ly diplay the nodes the edges with the desired requirements mentioned above using D3.js or vis.js: the most adequate one that will be capble of viewing evne 50listings at the time. The version I have simply displays No Network data after upload of food file
-4. Build the LocationGraph component
-5. Make the Workbench page to be really complete and all functional
-6. Ensure everything is **clean, readable, and modular.**
+3. Make the Workbench page to be really complete and all functional
+4. Ensure everything is **clean, readable, and modular.**
 
 ---
 
@@ -58,6 +107,8 @@ This is my Github repository that is attched to the prompt
 Most components have been designed already but when i upload a file athat has the required structure and sheet it fails at the validation of the sheet structure
 ---
 
-I want the work on the workbech to be done progressively given that it is arduous and we test it progressively, and only when i validate a tash that we move to the next. Let me know if you need environment variables or authentication details to test logged-in logic. Also feel free to suggest packages that improve UX (e.g. Framer Motion, ShadCN UI, React Icons).
+I want the work on the workbech to be done progressively given that it is arduous and we test it progressively, and only when i validate a tash that we move to the next. Also feel free to suggest packages that improve UX (e.g. Framer Motion, ShadCN UI, React Icons).
+I equally attached a pdf that contains the tables: each table representing the data of one sheet of the excel file i am using to test the application
+
 
 Thanks! I want this to feel like a top-tier, production-ready app — polish matters.

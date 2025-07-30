@@ -3,10 +3,10 @@
 
 import { useLocale } from "next-intl";
 import { useState } from "react";
-import { Card } from "@/components/ui/Card";
-import { Input } from "@/components/ui/Input";
-import { Badge } from "@/components/ui/Badge";
-import { Tabs } from "@/components/ui/Tabs";
+import { Card } from "../../../components/ui/Card";
+import { Input } from "../../../components/ui/Input";
+import { Badge } from "../../../components/ui/Badge";
+import { Tabs } from "../../../components/ui/Tabs";
 import { 
   Search, 
   Book, 

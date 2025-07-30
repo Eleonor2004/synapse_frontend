@@ -1,28 +1,19 @@
-// src/app/[locale]/page.tsx - Server Component Alternative
-import { useTranslations } from "next-intl";
-
-// Generate static params for the supported locales
-export function generateStaticParams() {
-  return [
-    { locale: 'en' },
-    { locale: 'fr' }
-  ];
-}
-
+import { NavBar } from '../../components/layout/NavBar';
+import { HeroSection } from '../../components/home/HeroSection';
+import { FeatureList } from '../../components/home/FeatureList';
+import { NewsletterSection } from '../../components/home/NewsletterSection';
+import { Footer } from '../../components/layout/Footer';
 export default function HomePage() {
-  const t = useTranslations("HomePage");
-
-  return (
-    <div className="container mx-auto px-4 py-16 text-center">
-      <h1 className="text-4xl md:text-6xl font-bold">
-        {t("title")}
-      </h1>
-      <p className="mt-4 text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-        {t("description")}
-      </p>
-      <button className="mt-8 px-8 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors">
-        {t("ctaButton")}
-      </button>
-    </div>
-  );
+return (
+<div className="flex flex-col min-h-screen bg-background">
+<NavBar />
+<main className="flex-grow">
+<HeroSection />
+<FeatureList />
+{/* You can add the StatisticsSection back here if you wish */}
+<NewsletterSection />
+</main>
+<Footer />
+</div>
+);
 }

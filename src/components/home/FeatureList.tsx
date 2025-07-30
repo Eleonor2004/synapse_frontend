@@ -1,37 +1,50 @@
+'use client';
+
 import { useTranslations } from 'next-intl';
 import { Network, Waypoints, BarChart3 } from 'lucide-react';
-import { FeatureCard } from './FeatureCard';
+import { motion } from 'framer-motion';
+
+const features = [
+  { icon: Network, key: 'feature1' },
+  { icon: Waypoints, key: 'feature2' },
+  { icon: BarChart3, key: 'feature3' },
+];
+
+const cardVariants = {
+  initial: { opacity: 0, y: 50 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, amount: 0.3 },
+};
 
 export const FeatureList = () => {
   const t = useTranslations('FeatureList');
 
-  const features = [
-    {
-      icon: Network,
-      title: t('feature1_title'),
-      description: t('feature1_description'),
-    },
-    {
-      icon: Waypoints,
-      title: t('feature2_title'),
-      description: t('feature2_description'),
-    },
-    {
-      icon: BarChart3,
-      title: t('feature3_title'),
-      description: t('feature3_description'),
-    },
-  ];
-
   return (
-    <section className="py-20 md:py-32 bg-secondary/50">
-      <div className="container mx-auto px-4 md:px-6">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-foreground">
+    <section className="py-20 md:py-28 bg-secondary/50 border-y">
+      <div className="container mx-auto max-w-7xl px-4">
+        <motion.h2 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="text-3xl md:text-4xl font-bold text-center mb-16"
+        >
           {t('title')}
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feature) => (
-            <FeatureCard key={feature.title} {...feature} />
+        </motion.h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {features.map((feature, i) => (
+            <motion.div
+              key={feature.key}
+              variants={cardVariants}
+              transition={{ duration: 0.5, delay: i * 0.15 }}
+              className="bg-card p-8 rounded-xl border shadow-sm hover:shadow-primary/20 hover:-translate-y-2 transition-all duration-300"
+            >
+              <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 mb-6">
+                <feature.icon className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3">{t(`${feature.key}_title`)}</h3>
+              <p className="text-muted-foreground">{t(`${feature.key}_description`)}</p>
+            </motion.div>
           ))}
         </div>
       </div>

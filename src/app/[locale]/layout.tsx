@@ -2,6 +2,7 @@
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { ThemeProvider } from "../../providers/ThemeProvider";
+import { NotificationProvider } from "../../providers/NotificationProvider";
 import { NavBar } from "../../components/layout/NavBar";
 import { notFound } from "next/navigation";
 import "../globals.css"; // Import global styles
@@ -56,6 +57,7 @@ export default async function LocaleLayout({
       </head>
       <body className="antialiased">
         <NextIntlClientProvider messages={messages} locale={locale}>
+           <NotificationProvider>
           <ThemeProvider
             attribute="data-theme"
             defaultTheme="system"
@@ -80,6 +82,7 @@ export default async function LocaleLayout({
               </div>
             </div>
           </ThemeProvider>
+          </NotificationProvider>
         </NextIntlClientProvider>
       </body>
     </html>

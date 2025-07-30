@@ -16,15 +16,10 @@ export interface NotificationData {
   duration?: number;
 }
 
-// --- USE NOTIFICATIONS HOOK ---
+// --- USE NOTIFICATIONS HOOK (No changes needed here, it's correct) ---
 
 /**
  * A custom hook to manage and display toast notifications.
- * @returns {object} An object containing notifications array, and functions to add/remove notifications.
- * @example
- * const { notifications, addNotification, removeNotification } = useNotifications();
- * // addNotification('success', 'Success!', 'Your action was completed.');
- * // <NotificationContainer notifications={notifications} removeNotification={removeNotification} />
  */
 export function useNotifications() {
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
@@ -37,7 +32,7 @@ export function useNotifications() {
     type: NotificationType,
     title: string,
     message: string,
-    duration: number = 30000 // Default duration set to 30 seconds
+    duration: number = 30000 // Default duration 30 seconds
   ) => {
     const id = Date.now().toString() + Math.random();
     setNotifications(prev => [...prev, { id, type, title, message, duration }]);
@@ -58,11 +53,18 @@ interface NotificationProps {
 function Notification({ notification, onClose }: NotificationProps) {
   const { id, type, title, message, duration = 30000 } = notification;
 
+  // This useEffect handles the automatic dismissal.
+  // It failed because the 'onClose' it received was not a function.
   useEffect(() => {
-    const timer = setTimeout(() => {
-      onClose(id);
-    }, duration);
-    return () => clearTimeout(timer);
+    // Ensure we have a valid duration and a function to call
+    if (duration && typeof onClose === 'function') {
+      const timer = setTimeout(() => {
+        onClose(id);
+      }, duration);
+      
+      // This cleanup is crucial: it clears the timer if the user closes the notification manually.
+      return () => clearTimeout(timer);
+    }
   }, [id, duration, onClose]);
 
   const iconMap = {
@@ -95,7 +97,8 @@ function Notification({ notification, onClose }: NotificationProps) {
         </div>
         <div className="ml-4 flex-shrink-0 flex">
           <button
-            onClick={() => onClose(id)}
+            // This button failed for the same reason: 'onClose' was not a function.
+            onClick={() => typeof onClose === 'function' && onClose(id)}
             className="inline-flex text-muted-foreground rounded-md hover:text-foreground focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
           >
             <span className="sr-only">Close</span>
@@ -106,7 +109,7 @@ function Notification({ notification, onClose }: NotificationProps) {
       <motion.div
         className="absolute bottom-0 left-0 h-1 bg-primary/50"
         initial={{ width: '100%' }}
-        animate={{ width: 0 }}
+        animate={{ width: '0%' }} // Animate to 0% width
         transition={{ duration: duration / 1000, ease: 'linear' }}
       />
     </motion.div>
@@ -127,12 +130,15 @@ interface NotificationContainerProps {
  */
 export function NotificationContainer({ notifications, removeNotification }: NotificationContainerProps) {
   return (
-    <div className="fixed top-0 right-0 p-4 sm:p-6 space-y-4 z-[9999]">
+    // MODIFICATION: Increased z-index to a very high value to ensure it's on top.
+    <div className="fixed top-0 right-0 p-4 sm:p-6 space-y-4 z-[99999]">
       <AnimatePresence>
         {notifications.map((notification) => (
           <Notification
             key={notification.id}
             notification={notification}
+            // CRITICAL FIX: Pass the 'removeNotification' function as the 'onClose' prop.
+            // The error you saw means this was likely not being passed correctly from your page.
             onClose={removeNotification}
           />
         ))}

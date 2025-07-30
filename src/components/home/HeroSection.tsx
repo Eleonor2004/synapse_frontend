@@ -1,46 +1,43 @@
-import { useTranslations } from 'next-intl';
-import Image from 'next/image';
-import Link from 'next/link';
+'use client';
 
-const hero_light = "/images/hero-light.png";
-const hero_dark = "/images/hero-dark.png";
+import { useTranslations } from 'next-intl';
+import { motion } from 'framer-motion';
+import { AnimatedShinyButton } from '../ui/AnimatedShinyButton';
+
+const fadeInUp = {
+  initial: { opacity: 0, y: 30 },
+  whileInView: { opacity: 1, y: 0 },
+  transition: { duration: 0.6, ease: 'easeInOut' },
+  viewport: { once: true },
+};
 
 export const HeroSection = () => {
   const t = useTranslations('HeroSection');
 
   return (
-    <section className="container mx-auto flex flex-col md:flex-row items-center gap-12 px-4 md:px-6 py-20 md:py-32">
-      <div className="md:w-1/2 space-y-6 text-center md:text-left">
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tighter text-foreground">
-          {t('tagline')}
-        </h1>
-        <p className="max-w-xl text-lg text-muted-foreground">
-          {t('description')}
-        </p>
-        <Link 
-          href="/workbench" 
-          className="inline-block bg-primary text-primary-foreground font-semibold py-3 px-8 rounded-md hover:bg-primary/90 transition-transform transform hover:scale-105"
+    <section className="relative overflow-hidden">
+      <div className="absolute inset-0 bg-grid-pattern [mask-image:radial-gradient(ellipse_at_center,transparent_10%,black)] dark:[mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]"></div>
+      <div className="container mx-auto max-w-7xl px-4 py-24 md:py-32 text-center">
+        <motion.h1
+          {...fadeInUp}
+          className="text-4xl md:text-6xl font-extrabold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-primary-dark to-primary-light"
         >
-          {t('cta')}
-        </Link>
-      </div>
-      <div className="md:w-1/2">
-        <div className="relative aspect-video">
-          <Image
-            src={hero_light}
-            alt="SYNAPSE light theme hero image"
-            layout="fill"
-            objectFit="contain"
-            className="dark:hidden"
-          />
-          <Image
-            src={hero_dark}
-            alt="SYNAPSE dark theme hero image"
-            layout="fill"
-            objectFit="contain"
-            className="hidden dark:block"
-          />
-        </div>
+          {t('tagline')}
+        </motion.h1>
+        <motion.p
+          {...fadeInUp}
+          transition={{ ...fadeInUp.transition, delay: 0.2 }}
+          className="mt-6 max-w-2xl mx-auto text-lg text-muted-foreground"
+        >
+          {t('description')}
+        </motion.p>
+        <motion.div
+          {...fadeInUp}
+          transition={{ ...fadeInUp.transition, delay: 0.4 }}
+          className="mt-10"
+        >
+          <AnimatedShinyButton href="/workbench" />
+        </motion.div>
       </div>
     </section>
   );
