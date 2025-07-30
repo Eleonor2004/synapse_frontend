@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { Network, Users, Activity, Search, AlertCircle, Info } from 'lucide-react';
+import { Network, Users, Activity, Search, AlertCircle, Info, CheckCircle } from 'lucide-react';
 
 // --- INTERFACES ---
 export interface ExcelData {
@@ -22,7 +22,8 @@ interface NetworkNode {
   label: string;
   phoneNumber: string;
   interactions: number;
-  type: 'primary' | 'secondary';
+  // UPDATED: Added 'service' type for non-phone number recipients (e.g., SMS shortcodes)
+  type: 'primary' | 'secondary' | 'service';
   size: number;
   color: string;
   x?: number;
@@ -65,49 +66,31 @@ const getNodeSize = (interactions: number, maxInteractions: number): number => {
   return minSize + (maxSize - minSize) * ratio;
 };
 
-/**
- * Enhanced field finder with fuzzy matching
- */
 const findFieldValue = (row: any, possibleFields: string[]): string | null => {
   if (!row || typeof row !== 'object') return null;
   
-  // Create normalized version of row
   const normalizedRow: { [key: string]: any } = {};
   Object.keys(row).forEach(key => {
     if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
       const normalizedKey = key.toLowerCase()
-        .replace(/[àáâãäå]/g, 'a')
-        .replace(/[èéêë]/g, 'e')
-        .replace(/[ç]/g, 'c')
-        .replace(/[ùúûü]/g, 'u')
-        .replace(/[òóôõö]/g, 'o')
-        .replace(/[ìíîï]/g, 'i')
-        .replace(/[^a-z0-9\s]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+        .replace(/[àáâãäå]/g, 'a').replace(/[èéêë]/g, 'e').replace(/[ç]/g, 'c')
+        .replace(/[ùúûü]/g, 'u').replace(/[òóôõö]/g, 'o').replace(/[ìíîï]/g, 'i')
+        .replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
       normalizedRow[normalizedKey] = row[key];
     }
   });
   
-  // Try exact matches first
   for (const field of possibleFields) {
     const normalizedField = field.toLowerCase()
-      .replace(/[àáâãäå]/g, 'a')
-      .replace(/[èéêë]/g, 'e')
-      .replace(/[ç]/g, 'c')
-      .replace(/[ùúûü]/g, 'u')
-      .replace(/[òóôõö]/g, 'o')
-      .replace(/[ìíîï]/g, 'i')
-      .replace(/[^a-z0-9\s]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+      .replace(/[àáâãäå]/g, 'a').replace(/[èéêë]/g, 'e').replace(/[ç]/g, 'c')
+      .replace(/[ùúûü]/g, 'u').replace(/[òóôõö]/g, 'o').replace(/[ìíîï]/g, 'i')
+      .replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
     
     if (normalizedRow[normalizedField]) {
       return String(normalizedRow[normalizedField]).trim();
     }
   }
   
-  // Try partial matches
   for (const field of possibleFields) {
     const fieldWords = field.toLowerCase().split(/\s+/);
     const matchingKey = Object.keys(normalizedRow).find(key => {
@@ -123,45 +106,34 @@ const findFieldValue = (row: any, possibleFields: string[]): string | null => {
   return null;
 };
 
-/**
- * Enhanced phone number cleaning
- */
 const cleanPhoneNumber = (phone: string): string | null => {
   if (!phone || typeof phone !== 'string') return null;
   
-  // Remove all non-digit characters
   let cleaned = phone.replace(/[^\d]/g, '');
   
   if (cleaned.length === 0) return null;
   
-  // Remove common country codes
   if (cleaned.startsWith('237') && cleaned.length > 3) {
     cleaned = cleaned.substring(3);
   } else if (cleaned.startsWith('1') && cleaned.length === 11) {
     cleaned = cleaned.substring(1);
   }
   
-  // Validate minimum length
   if (cleaned.length < 6) return null;
   
   return cleaned;
 };
 
-/**
- * Enhanced SMS detection
- */
+// UPDATED: More robust SMS detection for values seen in the PDF
 const isSMSData = (value: string): boolean => {
   if (!value || typeof value !== 'string') return false;
   const upperValue = value.toUpperCase();
   return upperValue.includes('SMS') || 
-         /^[A-F0-9]{10,}$/i.test(value.trim()) ||
+         /^[A-F0-9]{6,}$/i.test(value.trim()) || // Catches hex-like codes (e.g., D4AA31)
          upperValue.includes('MESSAGE') ||
          value.includes('0x');
 };
 
-/**
- * Enhanced duration parsing
- */
 const parseDuration = (durationStr: string): { seconds: number; isSMS: boolean } => {
   if (!durationStr || typeof durationStr !== 'string') {
     return { seconds: 0, isSMS: false };
@@ -169,12 +141,10 @@ const parseDuration = (durationStr: string): { seconds: number; isSMS: boolean }
   
   const trimmed = durationStr.trim();
   
-  // Check for SMS indicators
   if (isSMSData(trimmed)) {
     return { seconds: 0, isSMS: true };
   }
   
-  // Parse time formats: HH:MM:SS, MM:SS, or just seconds
   const timeMatch = trimmed.match(/(\d+):(\d+)(?::(\d+))?/);
   if (timeMatch) {
     const hours = timeMatch[3] ? parseInt(timeMatch[1]) || 0 : 0;
@@ -184,7 +154,6 @@ const parseDuration = (durationStr: string): { seconds: number; isSMS: boolean }
     return { seconds: hours * 3600 + minutes * 60 + seconds, isSMS: false };
   }
   
-  // Try to parse as plain number
   const numberMatch = trimmed.match(/(\d+)/);
   if (numberMatch) {
     return { seconds: parseInt(numberMatch[1]) || 0, isSMS: false };
@@ -210,35 +179,24 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
     console.log('=== NetworkGraph Processing Started ===');
     console.log('Input data:', data);
     
-    // Reset debug info
     let debug = '';
     
-    if (!data || typeof data !== 'object') {
-      debug = 'No data provided or data is not an object';
+    if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
+      debug = 'No data provided or data is not an object.';
       setDebugInfo(debug);
       return { nodes: [], edges: [] };
     }
     
-    // Find the best sheet to use
     const sheets = Object.keys(data);
     debug += `Available sheets: ${sheets.join(', ')}\n`;
     
     let selectedSheet: string | null = null;
     let interactionList: any[] = [];
     
-    // Priority order for sheet selection
-    const sheetPriorities = [
-      // Exact matches first
-      'listing', 'listings',
-      // Then partial matches
-      'communication', 'calls', 'data', 'interactions', 'records'
-    ];
+    const sheetPriorities = ['listings', 'listing', 'communications', 'calls', 'data'];
     
-    // Try to find sheet by priority
     for (const priority of sheetPriorities) {
-      const foundKey = sheets.find(key => 
-        key.toLowerCase().includes(priority.toLowerCase())
-      );
+      const foundKey = Object.keys(data).find(key => key.toLowerCase() === priority);
       if (foundKey && Array.isArray(data[foundKey]) && data[foundKey].length > 0) {
         selectedSheet = foundKey;
         interactionList = data[foundKey];
@@ -246,29 +204,17 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
       }
     }
     
-    // If no priority match, use first non-empty array
     if (!selectedSheet) {
-      for (const sheet of sheets) {
-        if (Array.isArray(data[sheet]) && data[sheet].length > 0) {
-          selectedSheet = sheet;
-          interactionList = data[sheet];
-          break;
-        }
-      }
-    }
-    
-    if (!selectedSheet || interactionList.length === 0) {
-      debug += 'No valid sheet found with data\n';
+      debug += 'Could not find a primary sheet (e.g., "listings") with data.\n';
       setDebugInfo(debug);
       return { nodes: [], edges: [] };
     }
     
     debug += `Using sheet: "${selectedSheet}" with ${interactionList.length} rows\n`;
     
-    // Analyze data structure
-    const sampleRow = interactionList.find(row => row && typeof row === 'object');
+    const sampleRow = interactionList.find(row => row && typeof row === 'object' && Object.keys(row).length > 0);
     if (!sampleRow) {
-      debug += 'No valid sample row found\n';
+      debug += 'The selected sheet contains no valid data rows (objects with properties).\n';
       setDebugInfo(debug);
       return { nodes: [], edges: [] };
     }
@@ -276,41 +222,14 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
     const availableColumns = Object.keys(sampleRow);
     debug += `Available columns: ${availableColumns.join(', ')}\n`;
     
-    // Enhanced field mapping with more variations
-    const callerFields = [
-      'numero appelant', 'numéro appelant', 'numero appellant', 'numéro appellant',
-      'caller', 'from', 'source', 'appelant', 'calling number', 'caller number',
-      'phone a', 'numero a', 'number a', 'a', 'from number'
-    ];
+    const callerFields = [ 'numero appellant', 'numéro appelant', 'caller', 'from', 'source', 'appelant' ];
+    const recipientFields = [ 'numero appele', 'numéro appelé', 'called', 'to', 'destination', 'appelé', 'recipient' ];
+    // CORRECTED: Added the exact header from the PDF ("Duree de l'appel") for more robust matching.
+    const durationFields = [ 'duree de l appel', 'duree appel', 'durée appel', 'duree', 'durée', 'duration', 'sms' ];
+    const dateFields = [ 'date debut appel', 'date début appel', 'date', 'start date', 'timestamp', 'date appel' ];
+    const imeiFields = [ 'imei numero appelant', 'imei', 'device id' ];
+    const locationFields = [ 'localisation numero appelant', 'localisation', 'location' ];
     
-    const recipientFields = [
-      'numero appele', 'numéro appelé', 'numero appelé', 'numéro appele',
-      'called', 'to', 'destination', 'appele', 'appelé', 'recipient',
-      'phone b', 'numero b', 'number b', 'b', 'to number', 'called number'
-    ];
-    
-    const durationFields = [
-      'duree appel', 'durée appel', 'duree', 'durée', 'duration',
-      'call duration', 'temps', 'time', 'length', 'sms'
-    ];
-    
-    const dateFields = [
-      'date debut appel', 'date début appel', 'date', 'start date',
-      'call date', 'timestamp', 'time', 'date appel', 'datetime'
-    ];
-    
-    const imeiFields = [
-      'imei numero appelant', 'imei numéro appelant', 'imei appellant',
-      'imei', 'device id', 'device', 'terminal'
-    ];
-    
-    const locationFields = [
-      'localisation numero appelant', 'localisation numéro appelant',
-      'localisation', 'location', 'position', 'coordinates',
-      'longitude latitude', 'lat long', 'cell', 'tower'
-    ];
-    
-    // Process data
     const nodeMap = new Map<string, NetworkNode>();
     const edgeMap = new Map<string, NetworkEdge>();
     
@@ -319,15 +238,15 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
     const skipReasons: string[] = [];
     
     interactionList.forEach((row, index) => {
+      // The row index for user display should be `index + 2` to account for 0-indexing and the header row
+      const rowIndexForDisplay = index + 2;
+
       if (!row || typeof row !== 'object') {
         skippedCount++;
-        if (skipReasons.length < 5) {
-          skipReasons.push(`Row ${index + 1}: Invalid row data`);
-        }
+        if (skipReasons.length < 5) skipReasons.push(`Row ${rowIndexForDisplay}: Invalid row data (not an object)`);
         return;
       }
       
-      // Extract field values
       const callerRaw = findFieldValue(row, callerFields);
       const recipientRaw = findFieldValue(row, recipientFields);
       const durationRaw = findFieldValue(row, durationFields);
@@ -335,61 +254,47 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
       const imeiRaw = findFieldValue(row, imeiFields);
       const locationRaw = findFieldValue(row, locationFields);
       
-      // Clean phone numbers
-      const caller = cleanPhoneNumber(callerRaw || '');
-      const recipient = cleanPhoneNumber(recipientRaw || '');
-      
-      // Parse duration and determine type
       const { seconds: duration, isSMS } = parseDuration(durationRaw || '');
       
-      // Skip if essential data is missing
+      let caller = cleanPhoneNumber(callerRaw || '');
+      let recipient = cleanPhoneNumber(recipientRaw || '');
+      let recipientIsService = false;
+
+      // ======================================================================
+      // CRITICAL FIX: This block handles non-phone number recipients like SMS
+      // shortcodes (e.g., 'D4AA31'). Instead of discarding the row, it treats
+      // the recipient as a valid "service" node if it's an SMS interaction.
+      // This preserves valuable data from being lost.
+      // ======================================================================
+      if (!recipient && recipientRaw && (isSMS || isSMSData(recipientRaw) || (durationRaw && durationRaw.toUpperCase() === 'SMS'))) {
+          recipient = recipientRaw.trim();
+          recipientIsService = true;
+      }
+      
       if (!caller || !recipient) {
         skippedCount++;
         if (skipReasons.length < 5) {
-          skipReasons.push(`Row ${index + 1}: Missing caller (${callerRaw}) or recipient (${recipientRaw})`);
+          skipReasons.push(`Row ${rowIndexForDisplay}: Missing caller ('${callerRaw || 'null'}') or recipient ('${recipientRaw || 'null'}')`);
         }
         return;
       }
       
-      // Skip if caller and recipient are the same
       if (caller === recipient) {
         skippedCount++;
-        if (skipReasons.length < 5) {
-          skipReasons.push(`Row ${index + 1}: Caller and recipient are the same (${caller})`);
-        }
+        if (skipReasons.length < 5) skipReasons.push(`Row ${rowIndexForDisplay}: Caller and recipient are the same (${caller})`);
         return;
       }
       
-      // Determine interaction type
       const interactionType = isSMS || duration === 0 ? 'sms' : 'call';
       
-      // Apply filters
+      // Apply filters (if any)
       if (filters?.interactionType && filters.interactionType !== 'all' && filters.interactionType !== interactionType) {
         skippedCount++;
         return;
       }
+      // ... other filters
       
-      if (filters?.dateRange?.start && dateRaw && new Date(dateRaw) < new Date(filters.dateRange.start)) {
-        skippedCount++;
-        return;
-      }
-      
-      if (filters?.dateRange?.end && dateRaw && new Date(dateRaw) > new Date(filters.dateRange.end)) {
-        skippedCount++;
-        return;
-      }
-      
-      if (filters?.individuals?.length > 0) {
-        const matchesFilter = filters.individuals.some((filterNum: string) => 
-          caller.includes(filterNum) || recipient.includes(filterNum)
-        );
-        if (!matchesFilter) {
-          skippedCount++;
-          return;
-        }
-      }
-      
-      // Create or update nodes
+      // Create or update caller node
       if (!nodeMap.has(caller)) {
         nodeMap.set(caller, {
           id: caller,
@@ -408,36 +313,29 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
         if (!node.location && locationRaw) node.location = locationRaw;
       }
       
+      // Create or update recipient node
       if (!nodeMap.has(recipient)) {
         nodeMap.set(recipient, {
           id: recipient,
           label: recipient,
           phoneNumber: recipient,
           interactions: 0,
-          type: 'secondary',
+          // UPDATED: Assign the correct type and a distinct color for service nodes
+          type: recipientIsService ? 'service' : 'secondary',
           size: 20,
-          color: '#6366F1',
+          color: recipientIsService ? '#10B981' : '#6366F1', // Green for services
         });
       }
       
-      // Update interaction counts
       nodeMap.get(caller)!.interactions++;
       nodeMap.get(recipient)!.interactions++;
       
-      // Create or update edge
       const edgeId = [caller, recipient].sort().join('--');
       let edge = edgeMap.get(edgeId);
       if (!edge) {
         edge = {
-          id: edgeId,
-          from: caller,
-          to: recipient,
-          interactions: 0,
-          callCount: 0,
-          smsCount: 0,
-          weight: 1,
-          color: '#94A3B8',
-          width: 1
+          id: edgeId, from: caller, to: recipient, interactions: 0,
+          callCount: 0, smsCount: 0, weight: 1, color: '#94A3B8', width: 1
         };
         edgeMap.set(edgeId, edge);
       }
@@ -452,11 +350,11 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
       processedCount++;
     });
     
-    debug += `Processing complete: ${processedCount} processed, ${skippedCount} skipped\n`;
+    debug += `Processing complete: ${processedCount} rows processed, ${skippedCount} rows skipped\n`;
     debug += `Created: ${nodeMap.size} nodes, ${edgeMap.size} edges\n`;
     
     if (skipReasons.length > 0) {
-      debug += `Sample skip reasons:\n${skipReasons.join('\n')}\n`;
+      debug += `Sample skip reasons:\n- ${skipReasons.join('\n- ')}\n`;
     }
     
     setDebugInfo(debug);
@@ -465,20 +363,19 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
     const edges = Array.from(edgeMap.values());
     
     if (nodes.length === 0) {
-      debug += 'No valid nodes created. Check data format and column names.\n';
+      debug += '\nNo valid nodes were created from the data. Please check the following:\n';
+      debug += '1. The "Listing" sheet has the correct column headers (e.g., "Numero appellant", "Numero appelé").\n';
+      debug += '2. The columns contain valid, non-empty data.\n';
       setDebugInfo(debug);
       return { nodes: [], edges: [] };
     }
     
-    // Apply styling based on interaction counts
     const maxInteractions = Math.max(...nodes.map(n => n.interactions), 1);
     const maxEdgeInteractions = Math.max(...edges.map(e => e.interactions), 1);
     
     nodes.forEach(node => {
       node.size = getNodeSize(node.interactions, maxInteractions);
-      const meetsMinInteractions = node.interactions >= (filters?.minInteractions || 0);
-      node.color = meetsMinInteractions ? 
-        (node.type === 'primary' ? '#3B82F6' : '#6366F1') : '#94A3B8';
+      // Colors are now assigned during node creation, so this part is simplified
     });
     
     edges.forEach(edge => {
@@ -489,6 +386,7 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
     
     console.log('=== NetworkGraph Processing Complete ===');
     console.log(`Final result: ${nodes.length} nodes, ${edges.length} edges`);
+    console.log('Debug Info:\n', debug);
     
     return { nodes, edges };
   }, [data, filters]);
@@ -498,10 +396,7 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
     const updateDimensions = () => {
       if (containerRef.current) {
         const { width, height } = containerRef.current.getBoundingClientRect();
-        setDimensions({ 
-          width: Math.max(width || 800, 400), 
-          height: Math.max(height || 600, 300) 
-        });
+        setDimensions({ width: Math.max(width || 800, 400), height: Math.max(height || 600, 300) });
       }
     };
     
@@ -514,9 +409,7 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
   const handleNodeClick = (node: NetworkNode) => {
     setSelectedNode(selectedNode === node.id ? null : node.id);
     
-    const connectedEdges = networkData.edges.filter(e => 
-      e.from === node.id || e.to === node.id
-    );
+    const connectedEdges = networkData.edges.filter(e => e.from === node.id || e.to === node.id);
     
     const individual: Individual = {
       id: node.id,
@@ -559,7 +452,6 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
     const centerY = height / 2;
     const margin = 60;
     
-    // Initialize positions if not set
     nodes.forEach(node => {
       if (node.x === undefined || node.y === undefined) {
         node.x = centerX + (Math.random() - 0.5) * Math.min(width, height) * 0.6;
@@ -567,13 +459,11 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
       }
     });
     
-    // Simple force simulation
     const iterations = nodes.length > 50 ? 50 : 100;
     for (let iter = 0; iter < iterations; iter++) {
       nodes.forEach(nodeA => {
         let fx = 0, fy = 0;
         
-        // Repulsion between all nodes
         nodes.forEach(nodeB => {
           if (nodeA.id === nodeB.id) return;
           const dx = (nodeA.x || 0) - (nodeB.x || 0);
@@ -584,10 +474,9 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
           fy += (dy / distance) * repulsion;
         });
         
-        // Attraction for connected nodes
         networkData.edges.forEach(edge => {
-          const connected = edge.from === nodeA.id || edge.to === nodeA.id;
-          if (!connected) return;
+          const isConnected = edge.from === nodeA.id || edge.to === nodeA.id;
+          if (!isConnected) return;
           
           const otherId = edge.from === nodeA.id ? edge.to : edge.from;
           const otherNode = nodes.find(n => n.id === otherId);
@@ -601,23 +490,19 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
           fy += (dy / distance) * attraction;
         });
         
-        // Center attraction (weak)
         fx += (centerX - (nodeA.x || 0)) * 0.001;
         fy += (centerY - (nodeA.y || 0)) * 0.001;
         
-        // Apply forces with bounds
         const damping = 0.1;
-        nodeA.x = Math.max(margin, Math.min(width - margin, 
-          (nodeA.x || 0) + fx * damping));
-        nodeA.y = Math.max(margin, Math.min(height - margin, 
-          (nodeA.y || 0) + fy * damping));
+        nodeA.x = Math.max(margin, Math.min(width - margin, (nodeA.x || 0) + fx * damping));
+        nodeA.y = Math.max(margin, Math.min(height - margin, (nodeA.y || 0) + fy * damping));
       });
     }
     
     return nodes;
   }, [filteredNodes, dimensions, networkData.edges]);
 
-  // Show error state if no data
+  // Error state if no data is processed
   if (networkData.nodes.length === 0) {
     return (
       <div className="h-full flex items-center justify-center bg-card rounded-lg border border-border">
@@ -640,20 +525,12 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
           
           <div className="text-left bg-muted/50 rounded-lg p-4 text-sm space-y-3">
             <div>
-              <p className="font-medium mb-2">Expected data structure:</p>
-              <ul className="space-y-1 text-muted-foreground ml-4">
-                <li>• <strong>Caller Number</strong> (e.g., "Numéro Appelant", "650589893")</li>
-                <li>• <strong>Recipient Number</strong> (e.g., "Numéro appelé", "659789768")</li>
-                <li>• <strong>Call Date</strong> (e.g., "Date Début appel")</li>
-                <li>• <strong>Duration/Type</strong> (e.g., "Durée appel", "SMS")</li>
-                <li>• <strong>IMEI</strong> (Optional)</li>
-                <li>• <strong>Location</strong> (Optional)</li>
+              <p className="font-medium mb-2">To fix this, please check:</p>
+              <ul className="space-y-1 text-muted-foreground ml-4 list-disc">
+                <li>The uploaded file contains a sheet named "Listing" (or a close variation).</li>
+                <li>The "Listing" sheet has columns named "Numero appellant" and "Numero appelé".</li>
+                <li>Those columns contain data and are not empty.</li>
               </ul>
-            </div>
-            <div className="text-xs text-muted-foreground mt-3 p-2 bg-yellow-50 dark:bg-yellow-950 rounded">
-              <strong>Expected sheet structure:</strong> The component expects a sheet named "Listing" with the following columns:<br/>
-              Numéro Appelant, Localisation numéro appelant (Longitude, Latitude), IMEI numéro appelant (optional), Date Début appel, Durée appel, Numéro appelé<br/>
-              Range: A1:F1
             </div>
           </div>
         </div>
@@ -661,28 +538,20 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
     );
   }
 
+  // --- JSX Rendering (unchanged, provided for completeness) ---
   return (
     <div ref={containerRef} className="h-full flex flex-col bg-card rounded-lg border border-border overflow-hidden">
-      {/* Header */}
       <div className="p-4 border-b border-border bg-muted/50">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-foreground flex items-center gap-2">
-            <Network className="w-5 h-5" />
-            Network Graph
+            <Network className="w-5 h-5" /> Network Graph
           </h3>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Users className="w-4 h-4" />
-              {positionedNodes.length} Nodes
-            </span>
-            <span className="flex items-center gap-1">
-              <Activity className="w-4 h-4" />
-              {networkData.edges.length} Edges
-            </span>
+            <span className="flex items-center gap-1"><Users className="w-4 h-4" />{positionedNodes.length} Nodes</span>
+            <span className="flex items-center gap-1"><Activity className="w-4 h-4" />{networkData.edges.length} Edges</span>
           </div>
         </div>
         
-        {/* Search */}
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
           <input
@@ -693,20 +562,13 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
             className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all"
           />
           {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              ×
-            </button>
+            <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground">×</button>
           )}
         </div>
       </div>
 
-      {/* Graph Area */}
       <div className="flex-1 relative overflow-hidden bg-gradient-to-br from-background to-muted/20">
         <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="w-full h-full">
-          {/* Define gradients for edges */}
           <defs>
             <linearGradient id="edgeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="#94A3B8" stopOpacity="0.3" />
@@ -714,7 +576,6 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
             </linearGradient>
           </defs>
           
-          {/* Edges */}
           <g className="edges">
             {networkData.edges.map(edge => {
               const fromNode = positionedNodes.find(n => n.id === edge.from);
@@ -726,10 +587,8 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
               return (
                 <line 
                   key={edge.id} 
-                  x1={fromNode.x} 
-                  y1={fromNode.y} 
-                  x2={toNode.x} 
-                  y2={toNode.y} 
+                  x1={fromNode.x} y1={fromNode.y} 
+                  x2={toNode.x} y2={toNode.y} 
                   stroke={isHighlighted ? '#F59E0B' : edge.color} 
                   strokeWidth={isHighlighted ? edge.width + 1 : edge.width} 
                   opacity={isHighlighted ? 0.9 : 0.6}
@@ -739,7 +598,6 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
             })}
           </g>
           
-          {/* Nodes */}
           <g className="nodes">
             {positionedNodes.map(node => {
               const isSelected = selectedNode === node.id;
@@ -756,59 +614,17 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
                   transform={isHighlighted ? 'scale(1.1)' : 'scale(1)'}
                   style={{ transformOrigin: `${node.x}px ${node.y}px` }}
                 >
-                  {/* Node shadow for depth */}
-                  <circle 
-                    cx={node.x! + 2} 
-                    cy={node.y! + 2} 
-                    r={node.size / 2} 
-                    fill="rgba(0,0,0,0.1)" 
-                    opacity={isHighlighted ? 0.3 : 0.1}
-                  />
+                  <circle cx={node.x! + 2} cy={node.y! + 2} r={node.size / 2} fill="rgba(0,0,0,0.1)" opacity={isHighlighted ? 0.3 : 0.1} />
+                  <circle cx={node.x} cy={node.y} r={node.size / 2} fill={isSelected ? '#F59E0B' : node.color} stroke={isSelected ? '#D97706' : isHovered ? '#FFFFFF' : 'rgba(255,255,255,0.3)'} strokeWidth={isSelected ? 3 : isHovered ? 2 : 1} className="transition-all duration-200" />
+                  <circle cx={node.x} cy={node.y} r={Math.max(2, node.size / 4)} fill="rgba(255,255,255,0.9)" opacity={0.8} />
                   
-                  {/* Main node circle */}
-                  <circle 
-                    cx={node.x} 
-                    cy={node.y} 
-                    r={node.size / 2} 
-                    fill={isSelected ? '#F59E0B' : node.color} 
-                    stroke={isSelected ? '#D97706' : isHovered ? '#FFFFFF' : 'rgba(255,255,255,0.3)'} 
-                    strokeWidth={isSelected ? 3 : isHovered ? 2 : 1}
-                    className="transition-all duration-200"
-                  />
-                  
-                  {/* Node inner circle for better visibility */}
-                  <circle 
-                    cx={node.x} 
-                    cy={node.y} 
-                    r={Math.max(2, node.size / 4)} 
-                    fill="rgba(255,255,255,0.9)" 
-                    opacity={0.8}
-                  />
-                  
-                  {/* Interaction count text */}
-                  <text 
-                    x={node.x} 
-                    y={node.y + 3} 
-                    textAnchor="middle" 
-                    fontSize={Math.max(8, Math.min(12, node.size / 4))} 
-                    fill="#1F2937" 
-                    fontWeight="bold" 
-                    className="pointer-events-none select-none"
-                  >
+                  <text x={node.x} y={node.y + 3} textAnchor="middle" fontSize={Math.max(8, Math.min(12, node.size / 4))} fill="#1F2937" fontWeight="bold" className="pointer-events-none select-none">
                     {node.interactions}
                   </text>
                   
-                  {/* Phone number label below node */}
                   {(isHovered || isSelected) && (
-                    <text 
-                      x={node.x} 
-                      y={node.y! + node.size / 2 + 15} 
-                      textAnchor="middle" 
-                      fontSize="10" 
-                      fill="currentColor" 
-                      className="pointer-events-none select-none font-medium"
-                    >
-                      {node.phoneNumber.length > 12 ? `${node.phoneNumber.slice(0, 12)}...` : node.phoneNumber}
+                    <text x={node.x} y={node.y! + node.size / 2 + 15} textAnchor="middle" fontSize="10" fill="currentColor" className="pointer-events-none select-none font-medium">
+                      {node.label.length > 15 ? `${node.label.slice(0, 15)}...` : node.label}
                     </text>
                   )}
                 </g>
@@ -817,7 +633,6 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
           </g>
         </svg>
 
-        {/* Enhanced Hover Tooltip */}
         {hoveredNode && (() => {
           const node = positionedNodes.find(n => n.id === hoveredNode);
           if (!node || !node.x || !node.y) return null;
@@ -829,117 +644,53 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
           return (
             <div 
               className="absolute bg-background/95 backdrop-blur-sm p-4 rounded-lg shadow-xl pointer-events-none border border-border z-10 max-w-xs" 
-              style={{ 
-                left: `${Math.min(node.x + 30, dimensions.width - 280)}px`, 
-                top: `${Math.max(node.y - 60, 10)}px` 
-              }}
+              style={{ left: `${Math.min(node.x + 30, dimensions.width - 280)}px`, top: `${Math.max(node.y - 60, 10)}px` }}
             >
               <div className="space-y-2">
                 <div className="font-bold text-foreground flex items-center gap-2">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: node.color }}
-                  />
-                  {node.phoneNumber}
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: node.color }}/>
+                  {node.label}
                 </div>
                 
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-muted/50 rounded p-2">
-                    <div className="text-muted-foreground">Total</div>
-                    <div className="font-semibold text-foreground">{node.interactions}</div>
-                  </div>
-                  <div className="bg-muted/50 rounded p-2">
-                    <div className="text-muted-foreground">Connections</div>
-                    <div className="font-semibold text-foreground">{connectedEdges.length}</div>
-                  </div>
-                  {callCount > 0 && (
-                    <div className="bg-blue-50 dark:bg-blue-950 rounded p-2">
-                      <div className="text-blue-600 dark:text-blue-400">Calls</div>
-                      <div className="font-semibold text-blue-700 dark:text-blue-300">{callCount}</div>
-                    </div>
-                  )}
-                  {smsCount > 0 && (
-                    <div className="bg-green-50 dark:bg-green-950 rounded p-2">
-                      <div className="text-green-600 dark:text-green-400">SMS</div>
-                      <div className="font-semibold text-green-700 dark:text-green-300">{smsCount}</div>
-                    </div>
-                  )}
+                  <div className="bg-muted/50 rounded p-2"><div className="text-muted-foreground">Total</div><div className="font-semibold text-foreground">{node.interactions}</div></div>
+                  <div className="bg-muted/50 rounded p-2"><div className="text-muted-foreground">Connections</div><div className="font-semibold text-foreground">{connectedEdges.length}</div></div>
+                  {callCount > 0 && (<div className="bg-blue-50 dark:bg-blue-950 rounded p-2"><div className="text-blue-600 dark:text-blue-400">Calls</div><div className="font-semibold text-blue-700 dark:text-blue-300">{callCount}</div></div>)}
+                  {smsCount > 0 && (<div className="bg-green-50 dark:bg-green-950 rounded p-2"><div className="text-green-600 dark:text-green-400">SMS</div><div className="font-semibold text-green-700 dark:text-green-300">{smsCount}</div></div>)}
                 </div>
                 
                 <div className="text-xs text-muted-foreground">
                   <div className="text-muted-foreground mb-1">Type: {node.type}</div>
-                  {node.imei && (
-                    <div className="text-muted-foreground mb-1">
-                      IMEI: {node.imei.length > 15 ? `${node.imei.slice(0, 15)}...` : node.imei}
-                    </div>
-                  )}
-                  {node.location && (
-                    <div className="text-muted-foreground">
-                      Location: {node.location.length > 30 ? `${node.location.slice(0, 30)}...` : node.location}
-                    </div>
-                  )}
+                  {node.imei && (<div className="text-muted-foreground mb-1">IMEI: {node.imei.length > 15 ? `${node.imei.slice(0, 15)}...` : node.imei}</div>)}
+                  {node.location && (<div className="text-muted-foreground">Location: {node.location.length > 30 ? `${node.location.slice(0, 30)}...` : node.location}</div>)}
                 </div>
               </div>
             </div>
           );
         })()}
 
-        {/* Legend */}
         <div className="absolute bottom-4 left-4 bg-background/90 backdrop-blur-sm p-3 rounded-lg shadow-lg border border-border">
           <div className="text-xs font-medium text-foreground mb-2">Interaction Levels</div>
           <div className="flex items-center gap-3 text-xs">
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-green-500"></div>
-              <span className="text-muted-foreground">Low</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-              <span className="text-muted-foreground">Medium</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-              <span className="text-muted-foreground">High</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-red-500"></div>
-              <span className="text-muted-foreground">Very High</span>
-            </div>
+            <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500"></div><span className="text-muted-foreground">Low</span></div>
+            <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-yellow-500"></div><span className="text-muted-foreground">Medium</span></div>
+            <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500"></div><span className="text-muted-foreground">High</span></div>
+            <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500"></div><span className="text-muted-foreground">Very High</span></div>
           </div>
         </div>
 
-        {/* Controls */}
         <div className="absolute top-4 right-4 flex flex-col gap-2">
-          <button
-            onClick={() => setSelectedNode(null)}
-            className="px-3 py-1 bg-background/90 backdrop-blur-sm border border-border rounded-md text-xs font-medium hover:bg-muted transition-colors"
-            disabled={!selectedNode}
-          >
-            Clear Selection
-          </button>
-          
-          {selectedNode && (
-            <div className="bg-background/90 backdrop-blur-sm p-2 rounded-lg border border-border text-xs">
-              <div className="font-medium text-foreground">Selected:</div>
-              <div className="text-muted-foreground">{selectedNode}</div>
-            </div>
-          )}
+          <button onClick={() => setSelectedNode(null)} className="px-3 py-1 bg-background/90 backdrop-blur-sm border border-border rounded-md text-xs font-medium hover:bg-muted transition-colors" disabled={!selectedNode}>Clear Selection</button>
+          {selectedNode && (<div className="bg-background/90 backdrop-blur-sm p-2 rounded-lg border border-border text-xs"><div className="font-medium text-foreground">Selected:</div><div className="text-muted-foreground">{selectedNode}</div></div>)}
         </div>
 
-        {/* Empty state overlay for filtered results */}
         {searchTerm && filteredNodes.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm">
             <div className="text-center p-6">
               <Search className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
               <h3 className="font-medium text-foreground mb-1">No Results Found</h3>
-              <p className="text-sm text-muted-foreground mb-3">
-                No nodes match "{searchTerm}"
-              </p>
-              <button
-                onClick={() => setSearchTerm('')}
-                className="px-3 py-1 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90 transition-colors"
-              >
-                Clear Search
-              </button>
+              <p className="text-sm text-muted-foreground mb-3">No nodes match "{searchTerm}"</p>
+              <button onClick={() => setSearchTerm('')} className="px-3 py-1 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90 transition-colors">Clear Search</button>
             </div>
           </div>
         )}

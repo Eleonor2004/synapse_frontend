@@ -193,16 +193,14 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
     try {
       updateProcessingStep('validate', 'processing', 'Reading file structure...');
       
-      // NO CHANGE NEEDED HERE: 'File' now correctly refers to the native browser File API.
       const arrayBuffer = file instanceof File ? await file.arrayBuffer() : file;
       const workbook = XLSX.read(arrayBuffer, { 
         type: "array",
         cellDates: true,
         cellNF: false,
-        cellText: false
+        cellText: true
       });
       
-      // Enhanced validation
       const validation = validateSheetStructure(workbook, fileName);
       setValidationResult(validation);
       
@@ -222,7 +220,6 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
       updateProcessingStep('validate', 'completed', `All ${validation.foundSheets.length} required sheets found`);
       updateProcessingStep('process', 'processing', 'Processing sheet data...');
       
-      // Enhanced data processing with better error handling
       const data: any = {};
       const sheetMapping = {
         subscribers: "Abonné",
@@ -239,7 +236,6 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
       
       for (const [key, sheetName] of Object.entries(sheetMapping)) {
         try {
-          // Use the actual sheet name (might be alternative)
           const actualSheetName = validation.alternativeSheets[sheetName] || sheetName;
           
           updateProcessingStep('process', 'processing', `Processing "${actualSheetName}"...`, (totalProcessed / totalSheets) * 100);
@@ -248,28 +244,22 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
             throw new Error(`Sheet "${actualSheetName}" not found`);
           }
           
-          // Enhanced sheet parsing with better options
+          // ==================================================================
+          // CRITICAL FIX: The primary cause of the error is corrected here.
+          // The `header: 1` option, which creates an array-of-arrays, has been
+          // removed. The default behavior of `sheet_to_json` creates an
+          // array of objects with keys derived from the header row, which is
+          // exactly what the NetworkGraph component expects.
+          // ==================================================================
           const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[actualSheetName], {
-            defval: null, // Use null for empty cells
-            raw: false, // Format values
-            header: 1, // Use first row as headers
-            blankrows: false // Skip blank rows
+            defval: null,
+            raw: false, 
+            blankrows: false
           });
           
-          // Data cleaning and validation
           const cleanedData = sheetData
-            .filter((row: any) => {
-              // Filter out completely empty rows
-              if (!Array.isArray(row)) return Object.values(row).some(cell => cell != null && cell !== "");
-              return row.some(cell => cell != null && cell !== "");
-            })
-            .map((row: any, index: number) => {
-              // Add row index for debugging
-              if (typeof row === 'object' && !Array.isArray(row)) {
-                return { ...row, _rowIndex: index + 1 };
-              }
-              return row;
-            });
+            .filter((row: any) => Object.values(row).some(cell => cell != null && cell !== ""))
+            .map((row: any, index: number) => ({ ...row, _rowIndex: index + 1 }));
           
           data[key] = cleanedData;
           totalProcessed++;
@@ -287,26 +277,14 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
       updateProcessingStep('process', 'completed', `Successfully processed ${totalProcessed} sheets`);
       updateProcessingStep('complete', 'processing', 'Finalizing data structure...');
       
-      // Enhanced data validation with specific checks
       if (!data.listings || data.listings.length === 0) {
         updateProcessingStep('complete', 'error', 'No interaction data found in Listing sheet');
         onError(`No interaction data found in the "Listing" sheet of "${fileName}". Please check if the sheet contains data.`);
         return false;
       }
 
-      // Check for required columns in Listing sheet
       const listingHeaders = data.listings[0] ? Object.keys(data.listings[0]) : [];
-      const requiredColumns = ['Numéro A', 'Numéro B', 'Date', 'Type'];
-      const missingColumns = requiredColumns.filter(col => 
-        !listingHeaders.some(header => header.toLowerCase().includes(col.toLowerCase().replace('é', 'e')))
-      );
       
-      if (missingColumns.length > 0) {
-        console.warn(`Missing expected columns in Listing sheet: ${missingColumns.join(", ")}`);
-        console.log("Available columns:", listingHeaders);
-      }
-      
-      // Add metadata to the processed data
       data._metadata = {
         fileName,
         processedAt: new Date().toISOString(),
@@ -338,14 +316,12 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
       const zip = new JSZip();
       const zipData = await zip.loadAsync(file);
       
-      // Enhanced file discovery in ZIP
       const excelFiles: Array<{ name: string; data: ArrayBuffer }> = [];
       const fileNames: string[] = [];
       
       for (const [fileName, zipEntry] of Object.entries(zipData.files)) {
         if (!zipEntry.dir) {
           fileNames.push(fileName);
-          // Support both .xlsx and .xls files
           if (fileName.toLowerCase().endsWith('.xlsx') || fileName.toLowerCase().endsWith('.xls')) {
             try {
               const arrayBuffer = await zipEntry.async('arraybuffer');
@@ -369,7 +345,6 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
       
       updateProcessingStep('locate', 'completed', `Found ${excelFiles.length} Excel file(s)`);
       
-      // Try to process each Excel file until we find one with valid structure
       let processed = false;
       const errors: string[] = [];
       
@@ -498,7 +473,6 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
               className="flex items-center gap-2 p-2 rounded-lg bg-gray-100 dark:bg-gray-700"
               whileHover={{ scale: 1.05 }}
             >
-              {/* CORRECTED: Use the renamed 'FileIcon' component */}
               <FileIcon className="w-4 h-4 text-green-600" />
               <span>.xlsx / .xls</span>
             </motion.div>
@@ -579,7 +553,6 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
                   {uploadedFile.name.endsWith('.zip') ? (
                     <Archive className="w-5 h-5 text-blue-600" />
                   ) : (
-                    // CORRECTED: Use the renamed 'FileIcon' component
                     <FileIcon className="w-5 h-5 text-blue-600" />
                   )}
                 </div>
@@ -618,7 +591,6 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
                           }
                         `}
                       >
-                        {/* CORRECTED: Use the renamed 'FileIcon' component */}
                         <FileIcon className="w-3 h-3" />
                         {fileName}
                       </div>
