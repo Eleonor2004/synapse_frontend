@@ -1,6 +1,6 @@
 
 
-import { LoginForm } from '@/components/auth/LoginForm';
+import { LoginForm } from '../../../components/auth/LoginForm';
 import Image from 'next/image';
 
 // Correctly reference images from the `public` directory.

@@ -1,12 +1,12 @@
 import { useTranslations } from 'next-intl';
-import { NavBar } from '@/components/layout/NavBar';
-import { TabContainer } from '@/components/ui/TabContainer';
-import { ProfileTab } from '@/components/dashboard/ProfileTab';
-import { SettingsTab } from '@/components/dashboard/SettingsTab';
-import { HistoryTab } from '@/components/dashboard/HistoryTab';
-import { StatisticsTab } from '@/components/dashboard/StatisticsTab';
-import { UserManagementTab } from '@/components/dashboard/UserManagementTab';
-import { NotificationsTab } from '@/components/dashboard/NotificationsTab';
+import { NavBar } from '../../../components/layout/NavBar';
+import { TabContainer } from '../../../components/ui/TabContainer';
+import { ProfileTab } from '../../../components/dashboard/ProfileTab';
+import { SettingsTab } from '../../../components/dashboard/SettingsTab';
+import { HistoryTab } from '../../../components/dashboard/HistoryTab';
+import { StatisticsTab } from '../../../components/dashboard/StatisticsTab';
+import { UserManagementTab } from '../../../components/dashboard/UserManagementTab';
+import { NotificationsTab } from '../../../components/dashboard/NotificationsTab';
 
 export default function DashboardPage() {
   const t = useTranslations('Dashboard');

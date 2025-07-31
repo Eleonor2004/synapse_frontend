@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { Network, Users, Activity, Search, AlertCircle, Info, CheckCircle } from 'lucide-react';
+import { Network, Users, Activity, Search, AlertCircle, Info } from 'lucide-react';
 
-// --- INTERFACES ---
+// --- INTERFACES (Unchanged) ---
 export interface ExcelData {
   [key: string]: any[];
 }
@@ -22,7 +22,6 @@ interface NetworkNode {
   label: string;
   phoneNumber: string;
   interactions: number;
-  // UPDATED: Added 'service' type for non-phone number recipients (e.g., SMS shortcodes)
   type: 'primary' | 'secondary' | 'service';
   size: number;
   color: string;
@@ -50,13 +49,13 @@ interface NetworkGraphProps {
   onIndividualSelect: (individual: Individual) => void;
 }
 
-// --- ENHANCED HELPER FUNCTIONS ---
+// --- HELPER FUNCTIONS ---
 const getInteractionColor = (intensity: number, maxIntensity: number): string => {
   const ratio = Math.max(0, Math.min(1, intensity / maxIntensity));
-  if (ratio <= 0.25) return '#22C55E'; // Green
-  if (ratio <= 0.5) return '#EAB308';  // Yellow
-  if (ratio <= 0.75) return '#F97316'; // Orange
-  return '#EF4444'; // Red
+  if (ratio <= 0.25) return '#22C55E';
+  if (ratio <= 0.5) return '#EAB308';
+  if (ratio <= 0.75) return '#F97316';
+  return '#EF4444';
 };
 
 const getNodeSize = (interactions: number, maxInteractions: number): number => {
@@ -66,101 +65,98 @@ const getNodeSize = (interactions: number, maxInteractions: number): number => {
   return minSize + (maxSize - minSize) * ratio;
 };
 
-const findFieldValue = (row: any, possibleFields: string[]): string | null => {
+// =================================================================================
+// CRITICAL FIX: The findFieldValue function is updated to be more precise.
+// It now accepts an `excludeFields` parameter to prevent it from incorrectly
+// matching the caller's column when it's searching for the recipient's column.
+// =================================================================================
+const findFieldValue = (row: any, possibleFields: string[], excludeFields: string[] = []): string | null => {
   if (!row || typeof row !== 'object') return null;
-  
+
+  const normalize = (str: string) => str.toLowerCase()
+    .replace(/[àáâãäå]/g, 'a').replace(/[èéêë]/g, 'e').replace(/[ç]/g, 'c')
+    .replace(/[ùúûü]/g, 'u').replace(/[òóôõö]/g, 'o').replace(/[ìíîï]/g, 'i')
+    .replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+
   const normalizedRow: { [key: string]: any } = {};
+  const normalizedExcludeFields = excludeFields.map(normalize);
+
   Object.keys(row).forEach(key => {
+    const normalizedKey = normalize(key);
     if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
-      const normalizedKey = key.toLowerCase()
-        .replace(/[àáâãäå]/g, 'a').replace(/[èéêë]/g, 'e').replace(/[ç]/g, 'c')
-        .replace(/[ùúûü]/g, 'u').replace(/[òóôõö]/g, 'o').replace(/[ìíîï]/g, 'i')
-        .replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
       normalizedRow[normalizedKey] = row[key];
     }
   });
-  
+
+  const availableKeys = Object.keys(normalizedRow);
+
+  // 1. Try for an exact match first
   for (const field of possibleFields) {
-    const normalizedField = field.toLowerCase()
-      .replace(/[àáâãäå]/g, 'a').replace(/[èéêë]/g, 'e').replace(/[ç]/g, 'c')
-      .replace(/[ùúûü]/g, 'u').replace(/[òóôõö]/g, 'o').replace(/[ìíîï]/g, 'i')
-      .replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
-    
-    if (normalizedRow[normalizedField]) {
+    const normalizedField = normalize(field);
+    if (normalizedRow[normalizedField] && !normalizedExcludeFields.includes(normalizedField)) {
       return String(normalizedRow[normalizedField]).trim();
     }
   }
-  
+
+  // 2. Try for a partial match if no exact match is found
   for (const field of possibleFields) {
-    const fieldWords = field.toLowerCase().split(/\s+/);
-    const matchingKey = Object.keys(normalizedRow).find(key => {
-      return fieldWords.some(word => key.includes(word)) ||
-             fieldWords.length > 1 && fieldWords.every(word => key.includes(word));
+    const fieldWords = normalize(field).split(/\s+/).filter(w => w.length > 2);
+    const matchingKey = availableKeys.find(key => {
+      if (normalizedExcludeFields.includes(key)) {
+        return false;
+      }
+      // Check if all significant words from the possible field name are in the column key
+      return fieldWords.every(word => key.includes(word));
     });
-    
+
     if (matchingKey && normalizedRow[matchingKey]) {
       return String(normalizedRow[matchingKey]).trim();
     }
   }
-  
+
   return null;
 };
 
+
 const cleanPhoneNumber = (phone: string): string | null => {
   if (!phone || typeof phone !== 'string') return null;
-  
-  let cleaned = phone.replace(/[^\d]/g, '');
-  
+  let cleaned = String(phone).replace(/[^\d]/g, '');
   if (cleaned.length === 0) return null;
-  
-  if (cleaned.startsWith('237') && cleaned.length > 3) {
+  if (cleaned.startsWith('237')) {
     cleaned = cleaned.substring(3);
-  } else if (cleaned.startsWith('1') && cleaned.length === 11) {
-    cleaned = cleaned.substring(1);
   }
-  
-  if (cleaned.length < 6) return null;
-  
+  if (cleaned.length < 8) return null; // Standard numbers are 9 digits
   return cleaned;
 };
 
-// UPDATED: More robust SMS detection for values seen in the PDF
 const isSMSData = (value: string): boolean => {
   if (!value || typeof value !== 'string') return false;
   const upperValue = value.toUpperCase();
-  return upperValue.includes('SMS') || 
-         /^[A-F0-9]{6,}$/i.test(value.trim()) || // Catches hex-like codes (e.g., D4AA31)
-         upperValue.includes('MESSAGE') ||
-         value.includes('0x');
+  return upperValue.includes('SMS') || /^[A-F0-9]{6,}$/i.test(value.trim());
 };
 
 const parseDuration = (durationStr: string): { seconds: number; isSMS: boolean } => {
-  if (!durationStr || typeof durationStr !== 'string') {
+    if (!durationStr || typeof durationStr !== 'string') {
+        return { seconds: 0, isSMS: false };
+    }
+    const trimmed = durationStr.trim();
+    if (isSMSData(trimmed)) {
+        return { seconds: 0, isSMS: true };
+    }
+    const timeMatch = trimmed.match(/(\d+):(\d+)(?::(\d+))?/);
+    if (timeMatch) {
+        const hours = timeMatch[3] ? parseInt(timeMatch[1], 10) || 0 : 0;
+        const minutes = timeMatch[3] ? parseInt(timeMatch[2], 10) : parseInt(timeMatch[1], 10) || 0;
+        const seconds = timeMatch[3] ? parseInt(timeMatch[3], 10) : parseInt(timeMatch[2], 10) || 0;
+        return { seconds: hours * 3600 + minutes * 60 + seconds, isSMS: false };
+    }
+    const numberMatch = trimmed.match(/(\d+)/);
+    if (numberMatch) {
+        return { seconds: parseInt(numberMatch[1], 10) || 0, isSMS: false };
+    }
     return { seconds: 0, isSMS: false };
-  }
-  
-  const trimmed = durationStr.trim();
-  
-  if (isSMSData(trimmed)) {
-    return { seconds: 0, isSMS: true };
-  }
-  
-  const timeMatch = trimmed.match(/(\d+):(\d+)(?::(\d+))?/);
-  if (timeMatch) {
-    const hours = timeMatch[3] ? parseInt(timeMatch[1]) || 0 : 0;
-    const minutes = timeMatch[3] ? parseInt(timeMatch[2]) || 0 : parseInt(timeMatch[1]) || 0;
-    const seconds = timeMatch[3] ? parseInt(timeMatch[3]) || 0 : parseInt(timeMatch[2]) || 0;
-    
-    return { seconds: hours * 3600 + minutes * 60 + seconds, isSMS: false };
-  }
-  
-  const numberMatch = trimmed.match(/(\d+)/);
-  if (numberMatch) {
-    return { seconds: parseInt(numberMatch[1]) || 0, isSMS: false };
-  }
-  
-  return { seconds: 0, isSMS: false };
 };
+
 
 export const NetworkGraph: React.FC<NetworkGraphProps> = ({
   data,
@@ -176,59 +172,27 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
   const [debugInfo, setDebugInfo] = useState<string>('');
 
   const networkData = useMemo(() => {
-    console.log('=== NetworkGraph Processing Started ===');
-    console.log('Input data:', data);
-    
     let debug = '';
-    
-    if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
-      debug = 'No data provided or data is not an object.';
-      setDebugInfo(debug);
+    if (!data || !data.listings) {
+      setDebugInfo('No data or no "listings" sheet found.');
       return { nodes: [], edges: [] };
     }
-    
-    const sheets = Object.keys(data);
-    debug += `Available sheets: ${sheets.join(', ')}\n`;
-    
-    let selectedSheet: string | null = null;
-    let interactionList: any[] = [];
-    
-    const sheetPriorities = ['listings', 'listing', 'communications', 'calls', 'data'];
-    
-    for (const priority of sheetPriorities) {
-      const foundKey = Object.keys(data).find(key => key.toLowerCase() === priority);
-      if (foundKey && Array.isArray(data[foundKey]) && data[foundKey].length > 0) {
-        selectedSheet = foundKey;
-        interactionList = data[foundKey];
-        break;
-      }
+
+    const interactionList = data.listings;
+    debug += `Available sheets: ${Object.keys(data).join(', ')}\n`;
+    debug += `Using sheet: "listings" with ${interactionList.length} rows\n`;
+
+    const sampleRow = interactionList[0];
+    if (sampleRow) {
+      debug += `Available columns: ${Object.keys(sampleRow).join(', ')}\n`;
     }
-    
-    if (!selectedSheet) {
-      debug += 'Could not find a primary sheet (e.g., "listings") with data.\n';
-      setDebugInfo(debug);
-      return { nodes: [], edges: [] };
-    }
-    
-    debug += `Using sheet: "${selectedSheet}" with ${interactionList.length} rows\n`;
-    
-    const sampleRow = interactionList.find(row => row && typeof row === 'object' && Object.keys(row).length > 0);
-    if (!sampleRow) {
-      debug += 'The selected sheet contains no valid data rows (objects with properties).\n';
-      setDebugInfo(debug);
-      return { nodes: [], edges: [] };
-    }
-    
-    const availableColumns = Object.keys(sampleRow);
-    debug += `Available columns: ${availableColumns.join(', ')}\n`;
-    
-    const callerFields = [ 'numero appellant', 'numéro appelant', 'caller', 'from', 'source', 'appelant' ];
-    const recipientFields = [ 'numero appele', 'numéro appelé', 'called', 'to', 'destination', 'appelé', 'recipient' ];
-    // CORRECTED: Added the exact header from the PDF ("Duree de l'appel") for more robust matching.
-    const durationFields = [ 'duree de l appel', 'duree appel', 'durée appel', 'duree', 'durée', 'duration', 'sms' ];
-    const dateFields = [ 'date debut appel', 'date début appel', 'date', 'start date', 'timestamp', 'date appel' ];
-    const imeiFields = [ 'imei numero appelant', 'imei', 'device id' ];
-    const locationFields = [ 'localisation numero appelant', 'localisation', 'location' ];
+
+    const callerFields = ['numero appelant', 'numéro appelant', 'caller', 'from', 'source', 'appelant', 'calling number'];
+    const recipientFields = ['numero appele', 'numéro appelé', 'called', 'to', 'destination', 'appelé', 'recipient', 'called number'];
+    const durationFields = ['duree de l appel', 'durée de l\'appel', 'duree appel', 'durée appel', 'duree', 'durée', 'duration', 'sms'];
+    const dateFields = ['date debut appel', 'date début appel', 'date', 'start date', 'call date', 'timestamp'];
+    const imeiFields = ['imei numero appelant', 'imei', 'device id'];
+    const locationFields = ['localisation numero appelant', 'localisation', 'location'];
     
     const nodeMap = new Map<string, NetworkNode>();
     const edgeMap = new Map<string, NetworkEdge>();
@@ -238,35 +202,29 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
     const skipReasons: string[] = [];
     
     interactionList.forEach((row, index) => {
-      // The row index for user display should be `index + 2` to account for 0-indexing and the header row
       const rowIndexForDisplay = index + 2;
 
       if (!row || typeof row !== 'object') {
         skippedCount++;
-        if (skipReasons.length < 5) skipReasons.push(`Row ${rowIndexForDisplay}: Invalid row data (not an object)`);
+        if (skipReasons.length < 5) skipReasons.push(`Row ${rowIndexForDisplay}: Invalid row data`);
         return;
       }
       
-      const callerRaw = findFieldValue(row, callerFields);
-      const recipientRaw = findFieldValue(row, recipientFields);
+      // =========================================================================
+      // CRITICAL FIX: The `excludeFields` parameter is now used to ensure the
+      // caller and recipient columns are not confused with each other.
+      // =========================================================================
+      const callerRaw = findFieldValue(row, callerFields, recipientFields);
+      const recipientRaw = findFieldValue(row, recipientFields, callerFields);
       const durationRaw = findFieldValue(row, durationFields);
-      const dateRaw = findFieldValue(row, dateFields);
-      const imeiRaw = findFieldValue(row, imeiFields);
-      const locationRaw = findFieldValue(row, locationFields);
-      
-      const { seconds: duration, isSMS } = parseDuration(durationRaw || '');
       
       let caller = cleanPhoneNumber(callerRaw || '');
       let recipient = cleanPhoneNumber(recipientRaw || '');
       let recipientIsService = false;
-
-      // ======================================================================
-      // CRITICAL FIX: This block handles non-phone number recipients like SMS
-      // shortcodes (e.g., 'D4AA31'). Instead of discarding the row, it treats
-      // the recipient as a valid "service" node if it's an SMS interaction.
-      // This preserves valuable data from being lost.
-      // ======================================================================
-      if (!recipient && recipientRaw && (isSMS || isSMSData(recipientRaw) || (durationRaw && durationRaw.toUpperCase() === 'SMS'))) {
+      
+      const { seconds: duration, isSMS } = parseDuration(durationRaw || '');
+      
+      if (!recipient && recipientRaw && (isSMS || isSMSData(durationRaw || ''))) {
           recipient = recipientRaw.trim();
           recipientIsService = true;
       }
@@ -285,46 +243,16 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
         return;
       }
       
+      const imeiRaw = findFieldValue(row, imeiFields);
+      const locationRaw = findFieldValue(row, locationFields);
       const interactionType = isSMS || duration === 0 ? 'sms' : 'call';
       
-      // Apply filters (if any)
-      if (filters?.interactionType && filters.interactionType !== 'all' && filters.interactionType !== interactionType) {
-        skippedCount++;
-        return;
-      }
-      // ... other filters
-      
-      // Create or update caller node
       if (!nodeMap.has(caller)) {
-        nodeMap.set(caller, {
-          id: caller,
-          label: caller,
-          phoneNumber: caller,
-          interactions: 0,
-          type: 'primary',
-          size: 20,
-          color: '#3B82F6',
-          imei: imeiRaw || undefined,
-          location: locationRaw || undefined,
-        });
-      } else {
-        const node = nodeMap.get(caller)!;
-        if (!node.imei && imeiRaw) node.imei = imeiRaw;
-        if (!node.location && locationRaw) node.location = locationRaw;
+        nodeMap.set(caller, { id: caller, label: caller, phoneNumber: caller, interactions: 0, type: 'primary', size: 20, color: '#3B82F6', imei: imeiRaw || undefined, location: locationRaw || undefined });
       }
       
-      // Create or update recipient node
       if (!nodeMap.has(recipient)) {
-        nodeMap.set(recipient, {
-          id: recipient,
-          label: recipient,
-          phoneNumber: recipient,
-          interactions: 0,
-          // UPDATED: Assign the correct type and a distinct color for service nodes
-          type: recipientIsService ? 'service' : 'secondary',
-          size: 20,
-          color: recipientIsService ? '#10B981' : '#6366F1', // Green for services
-        });
+        nodeMap.set(recipient, { id: recipient, label: recipient, phoneNumber: recipient, interactions: 0, type: recipientIsService ? 'service' : 'secondary', size: 20, color: recipientIsService ? '#10B981' : '#6366F1' });
       }
       
       nodeMap.get(caller)!.interactions++;
@@ -333,39 +261,29 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
       const edgeId = [caller, recipient].sort().join('--');
       let edge = edgeMap.get(edgeId);
       if (!edge) {
-        edge = {
-          id: edgeId, from: caller, to: recipient, interactions: 0,
-          callCount: 0, smsCount: 0, weight: 1, color: '#94A3B8', width: 1
-        };
-        edgeMap.set(edgeId, edge);
+        edge = { id: edgeId, from: caller, to: recipient, interactions: 0, callCount: 0, smsCount: 0, weight: 1, color: '#94A3B8', width: 1 };
       }
       
       edge.interactions++;
-      if (interactionType === 'call') {
-        edge.callCount++;
-      } else {
-        edge.smsCount++;
-      }
-      
+      if (interactionType === 'call') edge.callCount++;
+      else edge.smsCount++;
+      edgeMap.set(edgeId, edge);
+
       processedCount++;
     });
     
-    debug += `Processing complete: ${processedCount} rows processed, ${skippedCount} rows skipped\n`;
+    debug += `Processing complete: ${processedCount} processed, ${skippedCount} skipped\n`;
     debug += `Created: ${nodeMap.size} nodes, ${edgeMap.size} edges\n`;
-    
     if (skipReasons.length > 0) {
-      debug += `Sample skip reasons:\n- ${skipReasons.join('\n- ')}\n`;
+      debug += `Sample skip reasons:\n${skipReasons.join('\n')}\n`;
     }
-    
     setDebugInfo(debug);
     
     const nodes = Array.from(nodeMap.values());
     const edges = Array.from(edgeMap.values());
     
     if (nodes.length === 0) {
-      debug += '\nNo valid nodes were created from the data. Please check the following:\n';
-      debug += '1. The "Listing" sheet has the correct column headers (e.g., "Numero appellant", "Numero appelé").\n';
-      debug += '2. The columns contain valid, non-empty data.\n';
+      debug += 'No valid nodes created. Check data format and column names.\n';
       setDebugInfo(debug);
       return { nodes: [], edges: [] };
     }
@@ -375,7 +293,6 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
     
     nodes.forEach(node => {
       node.size = getNodeSize(node.interactions, maxInteractions);
-      // Colors are now assigned during node creation, so this part is simplified
     });
     
     edges.forEach(edge => {
@@ -384,14 +301,9 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
       edge.color = getInteractionColor(edge.interactions, maxEdgeInteractions);
     });
     
-    console.log('=== NetworkGraph Processing Complete ===');
-    console.log(`Final result: ${nodes.length} nodes, ${edges.length} edges`);
-    console.log('Debug Info:\n', debug);
-    
     return { nodes, edges };
   }, [data, filters]);
 
-  // Update dimensions on resize
   useEffect(() => {
     const updateDimensions = () => {
       if (containerRef.current) {
@@ -399,39 +311,27 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
         setDimensions({ width: Math.max(width || 800, 400), height: Math.max(height || 600, 300) });
       }
     };
-    
     updateDimensions();
     window.addEventListener('resize', updateDimensions);
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
-  // Handle node interactions
   const handleNodeClick = (node: NetworkNode) => {
     setSelectedNode(selectedNode === node.id ? null : node.id);
-    
     const connectedEdges = networkData.edges.filter(e => e.from === node.id || e.to === node.id);
-    
     const individual: Individual = {
-      id: node.id,
-      phoneNumber: node.phoneNumber,
-      imei: node.imei,
-      location: node.location,
-      interactions: node.interactions,
+      id: node.id, phoneNumber: node.phoneNumber, imei: node.imei, location: node.location, interactions: node.interactions,
       details: {
         type: node.type,
         connectedNodes: connectedEdges.length,
         callCount: connectedEdges.reduce((sum, e) => sum + e.callCount, 0),
         smsCount: connectedEdges.reduce((sum, e) => sum + e.smsCount, 0),
-        interactionTypes: ['calls', 'sms'].filter(type => 
-          connectedEdges.some(e => type === 'calls' ? e.callCount > 0 : e.smsCount > 0)
-        )
+        interactionTypes: ['calls', 'sms'].filter(type => connectedEdges.some(e => type === 'calls' ? e.callCount > 0 : e.smsCount > 0))
       }
     };
-    
     onIndividualSelect(individual);
   };
 
-  // Filter nodes based on search
   const filteredNodes = useMemo(() => {
     if (!searchTerm.trim()) return networkData.nodes;
     const searchLower = searchTerm.toLowerCase();
@@ -442,7 +342,6 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
     );
   }, [networkData.nodes, searchTerm]);
 
-  // Position nodes using force simulation
   const positionedNodes = useMemo(() => {
     const nodes = [...filteredNodes];
     if (nodes.length === 0) return [];
@@ -475,8 +374,8 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
         });
         
         networkData.edges.forEach(edge => {
-          const isConnected = edge.from === nodeA.id || edge.to === nodeA.id;
-          if (!isConnected) return;
+          const connected = edge.from === nodeA.id || edge.to === nodeA.id;
+          if (!connected) return;
           
           const otherId = edge.from === nodeA.id ? edge.to : edge.from;
           const otherNode = nodes.find(n => n.id === otherId);
@@ -502,7 +401,6 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
     return nodes;
   }, [filteredNodes, dimensions, networkData.edges]);
 
-  // Error state if no data is processed
   if (networkData.nodes.length === 0) {
     return (
       <div className="h-full flex items-center justify-center bg-card rounded-lg border border-border">
@@ -525,12 +423,20 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
           
           <div className="text-left bg-muted/50 rounded-lg p-4 text-sm space-y-3">
             <div>
-              <p className="font-medium mb-2">To fix this, please check:</p>
-              <ul className="space-y-1 text-muted-foreground ml-4 list-disc">
-                <li>The uploaded file contains a sheet named "Listing" (or a close variation).</li>
-                <li>The "Listing" sheet has columns named "Numero appellant" and "Numero appelé".</li>
-                <li>Those columns contain data and are not empty.</li>
+              <p className="font-medium mb-2">Expected data structure:</p>
+              <ul className="space-y-1 text-muted-foreground ml-4">
+                <li>• <strong>Caller Number</strong> (e.g., "Numéro Appelant", "650589893")</li>
+                <li>• <strong>Recipient Number</strong> (e.g., "Numéro appelé", "659789768")</li>
+                <li>• <strong>Call Date</strong> (e.g., "Date Début appel")</li>
+                <li>• <strong>Duration/Type</strong> (e.g., "Durée appel", "SMS")</li>
+                <li>• <strong>IMEI</strong> (Optional)</li>
+                <li>• <strong>Location</strong> (Optional)</li>
               </ul>
+            </div>
+            <div className="text-xs text-muted-foreground mt-3 p-2 bg-yellow-50 dark:bg-yellow-950 rounded">
+              <strong>Expected sheet structure:</strong> The component expects a sheet named "Listing" with the following columns:<br/>
+              Numéro Appelant, Localisation numéro appelant (Longitude, Latitude), IMEI numéro appelant (optional), Date Début appel, Durée appel, Numéro appelé<br/>
+              Range: A1:F1
             </div>
           </div>
         </div>
@@ -538,13 +444,13 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
     );
   }
 
-  // --- JSX Rendering (unchanged, provided for completeness) ---
   return (
     <div ref={containerRef} className="h-full flex flex-col bg-card rounded-lg border border-border overflow-hidden">
       <div className="p-4 border-b border-border bg-muted/50">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-foreground flex items-center gap-2">
-            <Network className="w-5 h-5" /> Network Graph
+            <Network className="w-5 h-5" />
+            Network Graph
           </h3>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1"><Users className="w-4 h-4" />{positionedNodes.length} Nodes</span>
@@ -617,15 +523,9 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
                   <circle cx={node.x! + 2} cy={node.y! + 2} r={node.size / 2} fill="rgba(0,0,0,0.1)" opacity={isHighlighted ? 0.3 : 0.1} />
                   <circle cx={node.x} cy={node.y} r={node.size / 2} fill={isSelected ? '#F59E0B' : node.color} stroke={isSelected ? '#D97706' : isHovered ? '#FFFFFF' : 'rgba(255,255,255,0.3)'} strokeWidth={isSelected ? 3 : isHovered ? 2 : 1} className="transition-all duration-200" />
                   <circle cx={node.x} cy={node.y} r={Math.max(2, node.size / 4)} fill="rgba(255,255,255,0.9)" opacity={0.8} />
-                  
-                  <text x={node.x} y={node.y + 3} textAnchor="middle" fontSize={Math.max(8, Math.min(12, node.size / 4))} fill="#1F2937" fontWeight="bold" className="pointer-events-none select-none">
-                    {node.interactions}
-                  </text>
-                  
+                  <text x={node.x} y={node.y + 3} textAnchor="middle" fontSize={Math.max(8, Math.min(12, node.size / 4))} fill="#1F2937" fontWeight="bold" className="pointer-events-none select-none">{node.interactions}</text>
                   {(isHovered || isSelected) && (
-                    <text x={node.x} y={node.y! + node.size / 2 + 15} textAnchor="middle" fontSize="10" fill="currentColor" className="pointer-events-none select-none font-medium">
-                      {node.label.length > 15 ? `${node.label.slice(0, 15)}...` : node.label}
-                    </text>
+                    <text x={node.x} y={node.y! + node.size / 2 + 15} textAnchor="middle" fontSize="10" fill="currentColor" className="pointer-events-none select-none font-medium">{node.phoneNumber.length > 12 ? `${node.phoneNumber.slice(0, 12)}...` : node.phoneNumber}</text>
                   )}
                 </g>
               );
@@ -647,18 +547,13 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({
               style={{ left: `${Math.min(node.x + 30, dimensions.width - 280)}px`, top: `${Math.max(node.y - 60, 10)}px` }}
             >
               <div className="space-y-2">
-                <div className="font-bold text-foreground flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: node.color }}/>
-                  {node.label}
-                </div>
-                
+                <div className="font-bold text-foreground flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: node.color }}/>{node.phoneNumber}</div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="bg-muted/50 rounded p-2"><div className="text-muted-foreground">Total</div><div className="font-semibold text-foreground">{node.interactions}</div></div>
                   <div className="bg-muted/50 rounded p-2"><div className="text-muted-foreground">Connections</div><div className="font-semibold text-foreground">{connectedEdges.length}</div></div>
                   {callCount > 0 && (<div className="bg-blue-50 dark:bg-blue-950 rounded p-2"><div className="text-blue-600 dark:text-blue-400">Calls</div><div className="font-semibold text-blue-700 dark:text-blue-300">{callCount}</div></div>)}
                   {smsCount > 0 && (<div className="bg-green-50 dark:bg-green-950 rounded p-2"><div className="text-green-600 dark:text-green-400">SMS</div><div className="font-semibold text-green-700 dark:text-green-300">{smsCount}</div></div>)}
                 </div>
-                
                 <div className="text-xs text-muted-foreground">
                   <div className="text-muted-foreground mb-1">Type: {node.type}</div>
                   {node.imei && (<div className="text-muted-foreground mb-1">IMEI: {node.imei.length > 15 ? `${node.imei.slice(0, 15)}...` : node.imei}</div>)}

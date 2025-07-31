@@ -76,9 +76,7 @@ It does not actually look like a white theme, i still see much of darkblue, and 
 
 Please help me progressively:
 
-1. Ameliorate the components of the Home page and make the move to another level with smooth animations like the home pag of Github, canva, tailwind 
-2. Go through the globals.css to fix the light theme althrough the app
-After this we will be moving to the next pages
+1. Ameliorate the globals.css to have a perfect light theme and the components i will be ving to you progressively: ameliorate them: good design, UI/UX, modern, responsive, animated 
 ---
 
 ### 🧵 GitHub Repository
