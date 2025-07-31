@@ -40,3 +40,16 @@ export interface ListingSet {
   owner_username: string;
   createdAt: string; // We receive this as an ISO string from the API
 }
+
+// Add these new types to your types/api.ts file
+export interface LocationPoint {
+  lat: number;
+  lng: number;
+  type: 'call' | 'sms';
+  timestamp: string;
+}
+
+export interface GraphResponse {
+  network: GraphData;
+  locations: LocationPoint[];
+}
