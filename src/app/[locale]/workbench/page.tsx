@@ -7,6 +7,7 @@ import { FileUploader } from "../../../components/workbench/FileUploader";
 import { NetworkGraph } from "../../../components/workbench/NetworkGraph";
 import { LocationGraph } from "../../../components/workbench/LocationGraph";
 import { FilterPanel } from "../../../components/workbench/FilterPanel";
+import { AuthGuard } from "../../../components/auth/AuthGuard";
 //import { IndividualInfo } from "@/components/workbench/IndividualInfo";
 import { useNotifications, NotificationContainer } from "../../../components/ui/Notification";
 import { LayoutGrid, Map, Filter, Search, Upload, Users, MapPin, Activity } from "lucide-react";
@@ -90,6 +91,7 @@ export default function WorkbenchPage() {
   };
 
   return (
+    <AuthGuard>
     <div className="min-h-screen bg-background">
       <NotificationContainer notifications={notifications} />
       
@@ -309,5 +311,6 @@ export default function WorkbenchPage() {
         )}
       </div>
     </div>
+    </AuthGuard>
   );
 }

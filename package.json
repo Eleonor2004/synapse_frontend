@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.83.0",
+    "axios": "^1.11.0",
     "framer-motion": "^12.23.11",
     "jszip": "^3.10.1",
     "leaflet": "^1.9.4",
@@ -23,7 +25,8 @@
     "react-leaflet": "^5.0.0",
     "vis-data": "^8.0.1",
     "vis-network": "^10.0.1",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "zustand": "^5.0.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

@@ -3,37 +3,33 @@
 
 import { useTranslations, useLocale } from "next-intl";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation"; // Import useRouter
 import { useState, useEffect } from "react";
-import { Menu, X, User, LogIn, Home, Info, HelpCircle, Wrench, LayoutDashboard } from "lucide-react";
+import { Menu, X, User, LogIn, Home, Info, HelpCircle, Wrench, LayoutDashboard, LogOut } from "lucide-react"; // Import LogOut
 import { ThemeSwitcher } from "../ThemeSwitcher";
 import { LanguageSwitcher } from "../LanguageSwitcher";
-
-// Mock authentication state - replace with your actual auth logic
-const useAuth = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState({ name: "John Doe" });
-  
-  // Simulate authentication check
-  useEffect(() => {
-    // Replace this with your actual authentication logic
-    const checkAuth = () => {
-      const isLoggedIn = localStorage?.getItem('isAuthenticated') === 'true';
-      setIsAuthenticated(isLoggedIn);
-    };
-    checkAuth();
-  }, []);
-  
-  return { isAuthenticated, user };
-};
+import { useAuthStore } from '../../app/store/authStore';
+ // IMPORT THE REAL AUTH STORE
 
 export function NavBar() {
   const t = useTranslations("NavBar");
   const locale = useLocale();
   const pathname = usePathname();
-  const { isAuthenticated, user } = useAuth();
+  const router = useRouter(); // Get the router instance for redirection
+
+  // --- USE THE REAL AUTH STORE ---
+  // This hook subscribes the component to the auth state.
+  // It will automatically re-render whenever isAuthenticated or user changes.
+  const { isAuthenticated, user, logout, initialize } = useAuthStore();
+  // -------------------------------
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  // Initialize auth state from localStorage when the component first mounts
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
 
   // Handle scroll effect
   useEffect(() => {
@@ -53,6 +49,13 @@ export function NavBar() {
     return pathname === `/${locale}${path === '/' ? '' : path}`;
   };
 
+  // --- Handle Logout ---
+  const handleLogout = () => {
+    logout(); // Call the logout action from our store
+    router.push(`/${locale}/login`); // Redirect to the login page
+  };
+  // ---------------------
+
   const navigationItems = [
     { 
       href: '/', 
@@ -60,12 +63,13 @@ export function NavBar() {
       icon: Home,
       active: isActivePath('/')
     },
-    { 
+    // Conditionally add the "Workbench" item to the array if the user is authenticated
+    ...(isAuthenticated ? [{ 
       href: '/workbench', 
       label: 'Workbench', 
       icon: Wrench,
       active: isActivePath('/workbench')
-    },
+    }] : []),
     { 
       href: '/about', 
       label: t("about"), 
@@ -135,18 +139,27 @@ export function NavBar() {
               {/* Dashboard/Login for Desktop */}
               <div className="hidden lg:flex items-center space-x-3">
                 {isAuthenticated ? (
-                  <Link
-                    href={`/${locale}/dashboard`}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 ${
-                      isActivePath('/dashboard')
-                        ? 'bg-gradient-to-r from-[#1e0546]/10 to-[#8e43ff]/10 text-[#8e43ff] border border-[#8e43ff]/20'
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 hover:text-[#8e43ff] dark:hover:text-[#8e43ff]'
-                    }`}
-                  >
-                    <LayoutDashboard className="w-4 h-4" />
-                    <User className="w-4 h-4" />
-                    <span className="font-medium">{user.name}</span>
-                  </Link>
+                  <>
+                    <Link
+                      href={`/${locale}/dashboard`}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 ${
+                        isActivePath('/dashboard')
+                          ? 'bg-gradient-to-r from-[#1e0546]/10 to-[#8e43ff]/10 text-[#8e43ff] border border-[#8e43ff]/20'
+                          : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 hover:text-[#8e43ff] dark:hover:text-[#8e43ff]'
+                      }`}
+                    >
+                      <LayoutDashboard className="w-4 h-4" />
+                      {/* Display the user's name from the store, with a fallback */}
+                      <span className="font-medium">{user?.full_name || user?.username}</span>
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center space-x-2 px-4 py-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 transition-all duration-300"
+                      aria-label="Logout"
+                    >
+                      <LogOut className="w-4 h-4" />
+                    </button>
+                  </>
                 ) : (
                   <Link
                     href={`/${locale}/login`}
@@ -222,22 +235,30 @@ export function NavBar() {
             {/* Mobile Auth Section */}
             <div className="border-t border-gray-200/50 dark:border-gray-700/50 mt-4 pt-4 px-6">
               {isAuthenticated ? (
-                <Link
-                  href={`/${locale}/dashboard`}
-                  className={`flex items-center space-x-3 py-3 transition-all duration-300 ${
-                    isActivePath('/dashboard')
-                      ? 'text-[#8e43ff]'
-                      : 'text-gray-700 dark:text-gray-300 hover:text-[#8e43ff] dark:hover:text-[#8e43ff]'
-                  }`}
-                >
-                  <LayoutDashboard className="w-5 h-5" />
-                  <User className="w-5 h-5" />
-                  <span className="font-medium">{user.name}</span>
-                </Link>
+                <>
+                  <Link
+                    href={`/${locale}/dashboard`}
+                    className={`flex items-center space-x-3 py-3 transition-all duration-300 mb-2 ${
+                      isActivePath('/dashboard')
+                        ? 'text-[#8e43ff]'
+                        : 'text-gray-700 dark:text-gray-300 hover:text-[#8e43ff] dark:hover:text-[#8e43ff]'
+                    }`}
+                  >
+                    <LayoutDashboard className="w-5 h-5" />
+                    <span className="font-medium">{user?.full_name || user?.username}</span>
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center space-x-3 py-3 px-4 rounded-lg bg-red-500/10 text-red-500"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    <span className="font-medium">Logout</span>
+                  </button>
+                </>
               ) : (
                 <Link
                   href={`/${locale}/login`}
-                  className="flex items-center space-x-3 py-3 px-4 rounded-lg bg-gradient-to-r from-[#1e0546] to-[#8e43ff] text-white shadow-brand transition-all duration-300"
+                  className="flex items-center justify-center space-x-3 py-3 px-4 rounded-lg bg-gradient-to-r from-[#1e0546] to-[#8e43ff] text-white shadow-brand transition-all duration-300"
                 >
                   <LogIn className="w-5 h-5" />
                   <span className="font-medium">Login</span>

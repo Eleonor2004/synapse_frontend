@@ -1,35 +1,72 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation'; // 1. Import the useRouter hook
+import { useState, FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+
+// Your custom components
 import { UsernameInput } from './UsernameInput';
 import { PasswordInput } from './PasswordInput';
 import { SubmitButton } from './SubmitButton';
 import { ErrorMessage } from '../ui/ErrorMessage';
 
+// Import our tools
+import apiClient from '../../lib/apiClient';
+import { useAuthStore } from '../../app/store/authStore';
+import { TokenResponse } from '../../types/api';
+
 export const LoginForm = () => {
   const t = useTranslations('LoginForm');
-  const router = useRouter(); // 2. Get the router instance
+  const router = useRouter();
+  
+  // 1. Get the login action from our global store
+  const login = useAuthStore((state) => state.login);
+
+  // 2. Add loading state for better user feedback
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Your existing state hooks
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // 3. Make the handler function asynchronous to await the API call
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
 
-    // --- MOCK AUTHENTICATION LOGIC ---
-    // In a real application, this would be an API call.
-    // The router.push would be in the .then() block of a successful promise.
-    if (username === 'admin' && password === 'password') {
-      // 3. Redirect on successful login
-      // The user will be sent to the root of the current locale (e.g., /en or /fr)
-      router.push('/'); 
-    } else {
-      setError(t('errors.invalidCredentials'));
+    // Prepare the form data for the API request.
+    // Our backend's token endpoint expects 'application/x-www-form-urlencoded'.
+    const params = new URLSearchParams();
+    params.append('username', username);
+    params.append('password', password);
+
+    try {
+      // --- REAL AUTHENTICATION LOGIC ---
+      const response = await apiClient.post<TokenResponse>('/auth/token', params, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      });
+
+      // 4. On success, call the login action from our global store
+      login(response.data.access_token);
+      console.log('✅ Login Successful:', response.data);
+
+      // 5. Redirect to the main page
+      router.push('/en');
+
+    } catch (err: any) {
+      // --- REAL ERROR HANDLING ---
+      console.error('❌ Login Failed:', err.response?.data || err.message);
+      // Use the specific error from the API, or a generic one
+      const errorMessage = err.response?.data?.detail || t('errors.generic');
+      setError(errorMessage);
+    } finally {
+      // 6. Always stop the loading indicator
+      setIsLoading(false);
     }
-    // --- END MOCK ---
   };
 
   return (
@@ -41,7 +78,8 @@ export const LoginForm = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         <UsernameInput value={username} onChange={(e) => setUsername(e.target.value)} />
         <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} />
-        <SubmitButton />
+        {/* 7. Pass the loading state to the submit button */}
+        <SubmitButton isLoading={isLoading} />
       </form>
       <ErrorMessage message={error} />
     </div>
