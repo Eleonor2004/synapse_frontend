@@ -51,12 +51,8 @@ It does not actually look like a white theme, i still see much of darkblue, and 
 
 ---
 
-### 🗂️ Pages Already Created (to redesign beautifully)
+### 🗂️ Pages to redesign beautifully
 
-* Home
-* About
-* Help
-* Workbench
 * Dashboard
 * Login
 

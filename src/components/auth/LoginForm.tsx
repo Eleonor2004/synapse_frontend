@@ -2,86 +2,98 @@
 
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
-
-// Your custom components
-import { UsernameInput } from './UsernameInput';
-import { PasswordInput } from './PasswordInput';
-import { SubmitButton } from './SubmitButton';
-import { ErrorMessage } from '../ui/ErrorMessage';
-
-// Import our tools
 import apiClient from '../../lib/apiClient';
-import { useAuthStore } from '../../app/store/authStore';
 import { TokenResponse } from '../../types/api';
+import { useAuthStore } from '../../app/store/authStore';
+import { getMe } from '../../services/userService'; // Import the service function
 
-export const LoginForm = () => {
-  const t = useTranslations('LoginForm');
+export function LoginForm() {
   const router = useRouter();
-  
-  // 1. Get the login action from our global store
-  const login = useAuthStore((state) => state.login);
-
-  // 2. Add loading state for better user feedback
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // Your existing state hooks
+  const { login } = useAuthStore(); // Get the login action from our global store
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // 3. Make the handler function asynchronous to await the API call
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
     setIsLoading(true);
+    setError(null);
 
-    // Prepare the form data for the API request.
-    // Our backend's token endpoint expects 'application/x-www-form-urlencoded'.
     const params = new URLSearchParams();
     params.append('username', username);
     params.append('password', password);
 
     try {
-      // --- REAL AUTHENTICATION LOGIC ---
-      const response = await apiClient.post<TokenResponse>('/auth/token', params, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
+      // Step 1: Get the authentication token from the backend
+      const tokenResponse = await apiClient.post<TokenResponse>('/auth/token', params, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       });
+      const token = tokenResponse.data.access_token;
 
-      // 4. On success, call the login action from our global store
-      login(response.data.access_token);
-      console.log('✅ Login Successful:', response.data);
+      // Step 2: IMPORTANT - Store the token in localStorage immediately.
+      // This ensures that the next API call (getMe) will be authenticated.
+      localStorage.setItem('authToken', token);
 
-      // 5. Redirect to the main page
-      router.push('/en');
+      // Step 3: Fetch the authenticated user's profile information
+      const userProfile = await getMe();
+
+      // Step 4: Call the global 'login' action with both the token and user profile
+      login(token, userProfile);
+
+      // Step 5: Redirect the user to their main workbench page
+      router.push('/workbench');
 
     } catch (err: any) {
-      // --- REAL ERROR HANDLING ---
       console.error('❌ Login Failed:', err.response?.data || err.message);
-      // Use the specific error from the API, or a generic one
-      const errorMessage = err.response?.data?.detail || t('errors.generic');
-      setError(errorMessage);
+      setError(err.response?.data?.detail || 'An unexpected error occurred.');
+      // Make sure to clean up a potentially stored token if login fails
+      localStorage.removeItem('authToken');
     } finally {
-      // 6. Always stop the loading indicator
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-md">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-foreground">{t('title')}</h1>
-        <p className="text-muted-foreground mt-2">{t('subtitle')}</p>
+    <div className="w-full max-w-md space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Welcome to SYNAPSE</h1>
+        <p className="mt-2 text-muted-foreground">
+          Enter your credentials to access your workbench.
+        </p>
       </div>
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <UsernameInput value={username} onChange={(e) => setUsername(e.target.value)} />
-        <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} />
-        {/* 7. Pass the loading state to the submit button */}
-        <SubmitButton isLoading={isLoading} />
+      <form className="space-y-6" onSubmit={handleSubmit}>
+        <div className="space-y-2">
+          <label htmlFor="username">Username</label>
+          <input
+            id="username"
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+            className="w-full p-2 border rounded bg-transparent" // Basic styling
+          />
+        </div>
+        <div className="space-y-2">
+          <label htmlFor="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="w-full p-2 border rounded bg-transparent" // Basic styling
+          />
+        </div>
+        {error && <p className="text-red-500 text-sm">{error}</p>}
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full p-3 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400" // Basic styling
+        >
+          {isLoading ? 'Signing In...' : 'Sign In'}
+        </button>
       </form>
-      <ErrorMessage message={error} />
     </div>
   );
-};
+}
