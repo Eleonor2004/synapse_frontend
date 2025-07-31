@@ -3,6 +3,8 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { ThemeProvider } from "../../providers/ThemeProvider";
 import { NotificationProvider } from "../../providers/NotificationProvider";
+import { AppProviders } from "../../providers/AppProviders";
+
 import { NavBar } from "../../components/layout/NavBar";
 import { notFound } from "next/navigation";
 import "../globals.css"; // Import global styles
@@ -66,6 +68,7 @@ export default async function LocaleLayout({
             storageKey="synapse-theme"
             themes={['light', 'dark', 'system']}
           >
+            <AppProviders>
             <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
               <NavBar />
               <main className="relative">
@@ -81,6 +84,8 @@ export default async function LocaleLayout({
                 <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-[#1e0546]/5 to-transparent rounded-full blur-3xl" />
               </div>
             </div>
+          
+          </AppProviders>
           </ThemeProvider>
           </NotificationProvider>
         </NextIntlClientProvider>

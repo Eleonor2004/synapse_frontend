@@ -3,25 +3,25 @@
 
 import { useTranslations, useLocale } from "next-intl";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation"; // Import useRouter
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Menu, X, User, LogIn, Home, Info, HelpCircle, Wrench, LayoutDashboard, LogOut } from "lucide-react"; // Import LogOut
+import { Menu, X, User, LogIn, Home, Info, HelpCircle, Wrench, LayoutDashboard, LogOut } from "lucide-react";
 import { ThemeSwitcher } from "../ThemeSwitcher";
 import { LanguageSwitcher } from "../LanguageSwitcher";
 import { useAuthStore } from '../../app/store/authStore';
- // IMPORT THE REAL AUTH STORE
+import { useIsClient } from '../../hooks/useIsClient'; // Import the hook to prevent hydration errors
 
 export function NavBar() {
   const t = useTranslations("NavBar");
   const locale = useLocale();
   const pathname = usePathname();
-  const router = useRouter(); // Get the router instance for redirection
-
-  // --- USE THE REAL AUTH STORE ---
-  // This hook subscribes the component to the auth state.
-  // It will automatically re-render whenever isAuthenticated or user changes.
+  const router = useRouter();
+  
+  // --- REAL AUTHENTICATION STATE ---
   const { isAuthenticated, user, logout, initialize } = useAuthStore();
-  // -------------------------------
+  // This custom hook returns `true` only after the component has mounted on the client
+  const isClient = useIsClient();
+  // ---------------------------------
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -31,7 +31,7 @@ export function NavBar() {
     initialize();
   }, [initialize]);
 
-  // Handle scroll effect
+  // Handle scroll effect for the header
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
@@ -40,7 +40,7 @@ export function NavBar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Close mobile menu when route changes
+  // Close the mobile menu automatically when the user navigates to a new page
   useEffect(() => {
     setIsMenuOpen(false);
   }, [pathname]);
@@ -49,13 +49,14 @@ export function NavBar() {
     return pathname === `/${locale}${path === '/' ? '' : path}`;
   };
 
-  // --- Handle Logout ---
+  // --- Handle Logout Action ---
   const handleLogout = () => {
-    logout(); // Call the logout action from our store
-    router.push(`/${locale}/login`); // Redirect to the login page
+    logout(); // Call the logout action from our global store
+    router.push(`/${locale}/login`); // Redirect the user to the login page
   };
-  // ---------------------
+  // --------------------------
 
+  // Dynamically build the navigation items based on the authentication state
   const navigationItems = [
     { 
       href: '/', 
@@ -63,13 +64,16 @@ export function NavBar() {
       icon: Home,
       active: isActivePath('/')
     },
-    // Conditionally add the "Workbench" item to the array if the user is authenticated
-    ...(isAuthenticated ? [{ 
+    // --- HYDRATION FIX ---
+    // Only add the "Workbench" item to the array if we are on the client AND the user is authenticated.
+    // This ensures the server render and initial client render are identical.
+    ...(isClient && isAuthenticated ? [{ 
       href: '/workbench', 
       label: 'Workbench', 
       icon: Wrench,
       active: isActivePath('/workbench')
     }] : []),
+    // ---------------------
     { 
       href: '/about', 
       label: t("about"), 
@@ -138,7 +142,8 @@ export function NavBar() {
               
               {/* Dashboard/Login for Desktop */}
               <div className="hidden lg:flex items-center space-x-3">
-                {isAuthenticated ? (
+                {/* --- HYDRATION FIX --- */}
+                {isClient && isAuthenticated ? (
                   <>
                     <Link
                       href={`/${locale}/dashboard`}
@@ -149,7 +154,6 @@ export function NavBar() {
                       }`}
                     >
                       <LayoutDashboard className="w-4 h-4" />
-                      {/* Display the user's name from the store, with a fallback */}
                       <span className="font-medium">{user?.full_name || user?.username}</span>
                     </Link>
                     <button
@@ -171,10 +175,7 @@ export function NavBar() {
                 )}
               </div>
 
-              {/* Language Switcher */}
               <LanguageSwitcher />
-              
-              {/* Theme Switcher */}
               <ThemeSwitcher />
 
               {/* Mobile Menu Button */}
@@ -183,11 +184,7 @@ export function NavBar() {
                 className="lg:hidden p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300"
                 aria-label="Toggle mobile menu"
               >
-                {isMenuOpen ? (
-                  <X className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-                ) : (
-                  <Menu className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-                )}
+                {isMenuOpen ? <X className="w-5 h-5 text-gray-700 dark:text-gray-300" /> : <Menu className="w-5 h-5 text-gray-700 dark:text-gray-300" />}
               </button>
             </div>
           </div>
@@ -234,7 +231,8 @@ export function NavBar() {
             
             {/* Mobile Auth Section */}
             <div className="border-t border-gray-200/50 dark:border-gray-700/50 mt-4 pt-4 px-6">
-              {isAuthenticated ? (
+              {/* --- HYDRATION FIX --- */}
+              {isClient && isAuthenticated ? (
                 <>
                   <Link
                     href={`/${locale}/dashboard`}
