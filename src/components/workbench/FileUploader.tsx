@@ -1,4 +1,4 @@
-// Enhanced FileUploader with improved validation and error handling
+//  FileUploader 
 "use client";
 
 import { useState, useCallback } from "react";

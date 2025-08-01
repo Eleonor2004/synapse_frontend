@@ -4,42 +4,45 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { Network, Users, Activity, Search } from 'lucide-react';
 import { GraphData, GraphNode as ApiNode, GraphEdge as ApiEdge } from '@/types/api';
 
-// Define a local type for nodes that includes position, as this is a UI concern
+// UI-specific node type
 interface UINode extends ApiNode {
-  x?: number;
-  y?: number;
+  x: number;
+  y: number;
   size: number;
+  color: string;
 }
 
+// The component now accepts the clean GraphData prop directly
 interface NetworkGraphProps {
-  data: GraphData;
-  // We can add this back later if needed
-  // onIndividualSelect: (individual: any) => void;
+  data: GraphData | null;
 }
 
-// Helper to calculate node size based on connections
-const getNodeSize = (node: ApiNode, edges: ApiEdge[]): number => {
-  const connections = edges.filter(e => e.source === node.id || e.target === node.id).length;
+// Helper functions
+const getNodeSize = (node: ApiNode, allEdges: ApiEdge[]): number => {
+  const connections = allEdges.filter(e => e.source === node.id || e.target === node.id).length;
   const minSize = 15;
-  const maxSize = 50;
-  const maxConnections = 10; // Cap the scaling for very connected nodes
+  const maxSize = 40;
+  const maxConnections = 10;
   const ratio = Math.min(connections / maxConnections, 1);
   return minSize + (maxSize - minSize) * ratio;
+};
+
+const getNodeColor = (node: ApiNode): string => {
+  switch (node.label) {
+    case 'Subscriber': return '#3B82F6'; // Blue
+    case 'Device': return '#10B981'; // Green
+    case 'CellTower': return '#8B5CF6'; // Purple
+    case 'Communication': return '#F59E0B'; // Amber
+    default: return '#6B7280'; // Gray
+  }
 };
 
 export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-
-  // The data is already processed! We just add UI-specific properties.
-  const uiNodes = useMemo<UINode[]>(() => {
-    return data.nodes.map(node => ({
-      ...node,
-      size: getNodeSize(node, data.edges),
-    }));
-  }, [data.nodes, data.edges]);
+  const [selectedNode, setSelectedNode] = useState<UINode | null>(null);
+  const [hoveredNode, setHoveredNode] = useState<UINode | null>(null);
 
   useEffect(() => {
     const updateDimensions = () => {
@@ -49,50 +52,39 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data }) => {
       }
     };
     updateDimensions();
-    window.addEventListener('resize', updateDimensions);
-    return () => window.removeEventListener('resize', updateDimensions);
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    if (containerRef.current) resizeObserver.observe(containerRef.current);
+    return () => resizeObserver.disconnect();
   }, []);
 
-  const filteredNodes = useMemo(() => {
-    if (!searchTerm.trim()) return uiNodes;
-    const searchLower = searchTerm.toLowerCase();
-    return uiNodes.filter(node =>
-      node.properties.phoneNumber?.toLowerCase().includes(searchLower)
-    );
-  }, [uiNodes, searchTerm]);
-
-  // A very simple force simulation for positioning nodes
-  const positionedNodes = useMemo(() => {
-    const nodes = [...filteredNodes];
-    if (nodes.length === 0) return [];
-
+  // This logic is now much simpler: it just adds UI properties to the clean data.
+  const positionedNodes = useMemo<UINode[]>(() => {
+    if (!data?.nodes) return [];
     const { width, height } = dimensions;
-    const centerX = width / 2;
-    const centerY = height / 2;
+    return data.nodes.map(node => ({
+      ...node,
+      x: Math.random() * width,
+      y: Math.random() * height,
+      size: getNodeSize(node, data.edges),
+      color: getNodeColor(node),
+    }));
+  }, [data, dimensions]);
 
-    // Initialize random positions if they don't exist
-    nodes.forEach(node => {
-      if (node.x === undefined || node.y === undefined) {
-        node.x = centerX + (Math.random() - 0.5) * width * 0.5;
-        node.y = centerY + (Math.random() - 0.5) * height * 0.5;
-      }
-    });
-
-    // This is a placeholder for a real physics engine like d3-force.
-    // For now, it just renders the initialized positions.
-    return nodes;
-  }, [filteredNodes, dimensions]);
+  const filteredNodes = useMemo(() => {
+    if (!searchTerm.trim()) return positionedNodes;
+    const searchLower = searchTerm.toLowerCase();
+    return positionedNodes.filter(node =>
+      node.properties.phoneNumber?.toLowerCase().includes(searchLower) ||
+      node.properties.imei?.toLowerCase().includes(searchLower)
+    );
+  }, [positionedNodes, searchTerm]);
 
   if (!data || data.nodes.length === 0) {
     return (
       <div className="h-full flex items-center justify-center text-center p-4">
-        <div>
-          <Network className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-          <h3 className="font-medium text-foreground">No Network Data</h3>
-          <p className="text-sm text-muted-foreground">
-            This analysis set does not contain any network graph information.
-          </p>
-        </div>
+        <Network className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-semibold">No Network Data</h3>
+        <p className="text-sm text-muted-foreground">This analysis does not contain any network information to visualize.</p>
       </div>
     );
   }
@@ -101,71 +93,32 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data }) => {
     <div ref={containerRef} className="h-full flex flex-col bg-card overflow-hidden">
       <div className="p-4 border-b border-border bg-muted/50">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-foreground flex items-center gap-2">
-            <Network className="w-5 h-5" />
-            Network Graph
-          </h3>
+          <h3 className="font-semibold text-foreground flex items-center gap-2"><Network className="w-5 h-5" /> Network Graph</h3>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1"><Users className="w-4 h-4" />{data.nodes.length} Nodes</span>
             <span className="flex items-center gap-1"><Activity className="w-4 h-4" />{data.edges.length} Edges</span>
           </div>
         </div>
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search nodes by phone number..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm"
-          />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input type="text" placeholder="Search nodes..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 bg-background border rounded-lg text-sm" />
         </div>
       </div>
-
       <div className="flex-1 relative overflow-hidden bg-background">
         <svg width={dimensions.width} height={dimensions.height} className="w-full h-full">
           <g className="edges">
             {data.edges.map(edge => {
-              const fromNode = positionedNodes.find(n => n.id === edge.source);
-              const toNode = positionedNodes.find(n => n.id === edge.target);
-              if (!fromNode || !toNode) return null;
-
-              return (
-                <line
-                  key={edge.id}
-                  x1={fromNode.x} y1={fromNode.y}
-                  x2={toNode.x} y2={toNode.y}
-                  stroke="rgba(128, 128, 128, 0.3)"
-                  strokeWidth={1}
-                />
-              );
+              const sourceNode = positionedNodes.find(n => n.id === edge.source);
+              const targetNode = positionedNodes.find(n => n.id === edge.target);
+              if (!sourceNode || !targetNode) return null;
+              return <line key={edge.id} x1={sourceNode.x} y1={sourceNode.y} x2={targetNode.x} y2={targetNode.y} stroke="rgba(128, 128, 128, 0.3)" strokeWidth={1} />;
             })}
           </g>
           <g className="nodes">
-            {positionedNodes.map(node => (
-              <g
-                key={node.id}
-                className="cursor-pointer"
-                onClick={() => setSelectedNodeId(node.id)}
-              >
-                <circle
-                  cx={node.x}
-                  cy={node.y}
-                  r={node.size / 2}
-                  fill={node.label === 'Subscriber' ? '#3b82f6' : '#10b981'}
-                  stroke={selectedNodeId === node.id ? '#f59e0b' : 'white'}
-                  strokeWidth={2}
-                />
-                <text
-                  x={node.x}
-                  y={node.y ? node.y + node.size / 2 + 12 : 0}
-                  textAnchor="middle"
-                  fontSize="10"
-                  fill="currentColor"
-                  className="pointer-events-none select-none"
-                >
-                  {node.properties.phoneNumber}
-                </text>
+            {filteredNodes.map(node => (
+              <g key={node.id} className="cursor-pointer" transform={`translate(${node.x}, ${node.y})`}>
+                <circle r={node.size / 2} fill={node.color} />
+                <text y={node.size / 2 + 12} textAnchor="middle" fontSize="10" fill="currentColor">{node.properties.phoneNumber}</text>
               </g>
             ))}
           </g>

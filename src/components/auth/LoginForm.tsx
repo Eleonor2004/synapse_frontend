@@ -42,7 +42,7 @@ export function LoginForm() {
       login(token, userProfile);
 
       // Step 5: Redirect the user to their main workbench page
-      router.push('/workbench');
+      router.push('/en/workbench');
 
     } catch (err: any) {
       console.error('❌ Login Failed:', err.response?.data || err.message);

@@ -17,16 +17,15 @@ Now, I want you to help me:
 
 
 ### 🔄 ** Build a functional workbench**
-I want the workbench to be be well designed and do all the task to be done, with responsive.we will use libairies such as vis.js, D3.js for the grapphs.  It is the core of our application. So it should be really well done:
- * We should import excel files with extension .xlsx, or extract those files from a zip or from a folder. and verify that this excel file has the following sheets within it: "Abonné", "Listing", "Fréquence par cellule", "Fréquence Correspondant", "Fréquence par Durée appel", "Fréquence par IMEI", "Identification des abonnés"
+Now it is already rendering but i am not satisfied with that. I want the workbench to be be well designed and do all the task to be done, with responsive.we will use libairies such as vis.js, D3.js for the grapphs.  It is the core of our application. So it should be really well done:
+ * We should import excel files with extension .xlsx, or extract those files from a zip or from a folder. and verify that this excel file has the following sheets within it: "Abonné", "Listing", "Fréquence par cellule", "Fréquence Correspondant", "Fréquence par Durée appel", "Fréquence par IMEI", "Identification des abonnés", which we already do in our present version
  * After the import a message will be displayed about the import if it failed, or if it was successful, so you will create a component for that that will display that message at the top right of screen and will be used althrouh the app, the color used should be indicative of the type of message: warning, info, success, failure ...
  * Next we will display two main graphs by exploiting the infos obtained from the different sheets, the aim of this app is to be able to visualize the interactions of an individual with people based on his listing so the interactions are seen in the sheet "Listing", an individual is identified by his number: so on the graph the nodes will be the individuals and the edges will be the interactions they had: SMS or call
  * Besides that we should be able to get informations about an individual by clicking on a node that will display those infos about the individual in a little node just like in Google Maps for places
  * The level of interaction of individuals should be seen from the color of their edges in progressive range: from green, yellow, orange, to red increeasingly also the size of the node should be obtained from the lelvel of interactions the indidual has
  * We should also have components for filter(based on interaction through SMS, phone calls, period of interaction, Interactions with one or more individuals identified by their IMEI or phone number) and search
  * The second graph should display the different localization of people through the day on a localization graph from Google Maps or Open street maps such that the path of a infividual will be the different points where he received a call or an sms. Each individual should have a color, such that from the graph we can see it they met or not and so on.
-Some components have been designed for the workbench already dont go from scratch proceed to ameliorate them and make them fully functional such as: FileUploader, NetworkGraph, FilterPanel
-
+This work was already very well done in the first version of my work that i will provide below but the it was 100% client side and it was even really faster. So I wnat you to go through the code i will provide and make such that the Network Graph and the locationGraph should be just as in that fist version and we should be able to see the infos of a node, the size of a node proportional to its numbers of interactions and it should not be too cumbersome. Do it well and then we will implement the filters
 
 
 ### 📦 Tech Stack
