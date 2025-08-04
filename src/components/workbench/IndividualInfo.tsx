@@ -1,4 +1,5 @@
 // src/components/workbench/IndividualInfo.tsx
+
 "use client";
 
 import { useMemo } from "react";
@@ -9,10 +10,8 @@ import {
   MessageSquare, 
   Clock, 
   Calendar, 
-  MapPin, 
   Activity,
   TrendingUp,
-  TrendingDown,
   Smartphone,
   Users,
   BarChart3,
@@ -20,9 +19,22 @@ import {
 } from "lucide-react";
 import { ExcelData, Individual } from "@/app/[locale]/workbench/page";
 
-interface IndividualInfoProps {
-  individual: Individual | null;
-  data: ExcelData;
+// Define a type for a single interaction record to avoid 'any'
+interface InteractionRecord {
+  [key: string]: string | number | undefined | null;
+  "Numéro A"?: string;
+  caller?: string;
+  source?: string;
+  "Numéro B"?: string;
+  called?: string;
+  target?: string;
+  Type?: string;
+  Durée?: string;
+  duration?: string;
+  Heure?: string;
+  time?: string;
+  Date?: string;
+  timestamp?: string;
 }
 
 interface InteractionStats {
@@ -35,7 +47,7 @@ interface InteractionStats {
   avgCallDuration: number;
   mostFrequentContact: string;
   timePattern: { [hour: string]: number };
-  recentActivity: any[];
+  recentActivity: InteractionRecord[];
   suspiciousPatterns: string[];
 }
 
@@ -44,7 +56,8 @@ export function IndividualInfo({ individual, data }: IndividualInfoProps) {
     if (!individual || !data.listings) return null;
 
     const phoneNumber = individual.phoneNumber;
-    const interactions = data.listings.filter((listing: any) => 
+    // Cast listings to the new type
+    const interactions = (data.listings as InteractionRecord[]).filter(listing => 
       String(listing["Numéro A"] || listing.caller || listing.source) === phoneNumber ||
       String(listing["Numéro B"] || listing.called || listing.target) === phoneNumber
     );
@@ -56,24 +69,22 @@ export function IndividualInfo({ individual, data }: IndividualInfoProps) {
     let callCount = 0;
     let callsOut = 0, callsIn = 0, smsOut = 0, smsIn = 0;
 
-    // Initialize time pattern (24 hours)
     for (let i = 0; i < 24; i++) {
       timePattern[i.toString().padStart(2, '0')] = 0;
     }
 
-    interactions.forEach((interaction: any) => {
+    interactions.forEach((interaction) => {
       const isOutgoing = String(interaction["Numéro A"] || interaction.caller || interaction.source) === phoneNumber;
       const contact = isOutgoing 
         ? String(interaction["Numéro B"] || interaction.called || interaction.target)
         : String(interaction["Numéro A"] || interaction.caller || interaction.source);
       
       const type = String(interaction.Type || 'appel').toLowerCase();
-      const duration = parseFloat(interaction.Durée || interaction.duration || 0);
+      const duration = parseFloat(String(interaction.Durée || interaction.duration || 0));
       
       contacts.add(contact);
       contactFrequency[contact] = (contactFrequency[contact] || 0) + 1;
 
-      // Count interaction types
       if (type.includes('sms')) {
         if (isOutgoing) smsOut++; else smsIn++;
       } else {
@@ -84,28 +95,33 @@ export function IndividualInfo({ individual, data }: IndividualInfoProps) {
         }
       }
 
-      // Extract time pattern
-      const timeStr = interaction.Heure || interaction.time || interaction.Date;
+      const timeStr = String(interaction.Heure || interaction.time || interaction.Date);
       if (timeStr) {
-        const hour = new Date(timeStr).getHours().toString().padStart(2, '0');
-        timePattern[hour] = (timePattern[hour] || 0) + 1;
+        try {
+            const date = new Date(timeStr);
+            if(!isNaN(date.getTime())) {
+                const hour = date.getHours().toString().padStart(2, '0');
+                if(timePattern[hour] !== undefined) {
+                    timePattern[hour]++;
+                }
+            }
+        } catch(e) {
+            // Ignore invalid date strings
+        }
       }
     });
-
-    // Find most frequent contact
+    
     const mostFrequentContact = Object.keys(contactFrequency).reduce((a, b) => 
       contactFrequency[a] > contactFrequency[b] ? a : b, ''
     );
 
-    // Detect suspicious patterns
     const suspiciousPatterns: string[] = [];
     if (interactions.length > 100) suspiciousPatterns.push("High activity volume");
     if (contacts.size > 50) suspiciousPatterns.push("Large contact network");
     if (callsOut > callsIn * 3) suspiciousPatterns.push("Unusual outgoing call pattern");
     
-    // Check for burst activity (many calls in short time)
     const timestamps = interactions
-      .map((i: any) => new Date(i.Date || i.timestamp).getTime())
+      .map(i => new Date(String(i.Date || i.timestamp)).getTime())
       .filter(t => !isNaN(t))
       .sort();
 
@@ -117,9 +133,8 @@ export function IndividualInfo({ individual, data }: IndividualInfoProps) {
     }
     if (burstCount > 10) suspiciousPatterns.push("Burst communication pattern");
 
-    // Get recent activity (last 10 interactions)
     const recentActivity = interactions
-      .sort((a: any, b: any) => new Date(b.Date || b.timestamp).getTime() - new Date(a.Date || a.timestamp).getTime())
+      .sort((a, b) => new Date(String(b.Date || b.timestamp)).getTime() - new Date(String(a.Date || a.timestamp)).getTime())
       .slice(0, 10);
 
     return {
@@ -152,6 +167,7 @@ export function IndividualInfo({ individual, data }: IndividualInfoProps) {
   }
 
   const getActivityColor = (value: number, max: number) => {
+    if (max === 0) return "bg-muted";
     const intensity = value / max;
     if (intensity === 0) return "bg-muted";
     if (intensity <= 0.25) return "bg-green-200 dark:bg-green-900";
@@ -166,7 +182,7 @@ export function IndividualInfo({ individual, data }: IndividualInfoProps) {
     return `${Math.round(seconds / 3600)}h`;
   };
 
-  const maxTimeActivity = Math.max(...Object.values(stats?.timePattern || {}));
+  const maxTimeActivity = Math.max(...Object.values(stats?.timePattern || {0:0}));
 
   return (
     <AnimatePresence mode="wait">
@@ -178,7 +194,6 @@ export function IndividualInfo({ individual, data }: IndividualInfoProps) {
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className="h-full bg-card border border-border rounded-lg shadow-sm overflow-hidden flex flex-col"
       >
-        {/* Header */}
         <div className="p-4 border-b border-border bg-gradient-to-r from-primary/5 to-secondary/5">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary text-white">
@@ -193,10 +208,8 @@ export function IndividualInfo({ individual, data }: IndividualInfoProps) {
           </div>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <div className="p-4 space-y-6">
-            {/* Quick Stats */}
             <div className="grid grid-cols-2 gap-3">
               {[
                 { label: "Total Interactions", value: stats?.totalInteractions || 0, icon: Activity, color: "text-primary" },
@@ -220,13 +233,11 @@ export function IndividualInfo({ individual, data }: IndividualInfoProps) {
               ))}
             </div>
 
-            {/* Communication Breakdown */}
             <div className="space-y-3">
               <h4 className="font-semibold text-foreground flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
                 Communication Breakdown
               </h4>
-              
               <div className="space-y-2">
                 {[
                   { label: "Outgoing Calls", value: stats?.callsOut || 0, icon: Phone, color: "bg-blue-500" },
@@ -235,7 +246,7 @@ export function IndividualInfo({ individual, data }: IndividualInfoProps) {
                   { label: "Incoming SMS", value: stats?.smsIn || 0, icon: MessageSquare, color: "bg-green-300" }
                 ].map((item, index) => {
                   const total = (stats?.totalInteractions || 1);
-                  const percentage = (item.value / total) * 100;
+                  const percentage = total > 0 ? (item.value / total) * 100 : 0;
                   
                   return (
                     <motion.div
@@ -266,13 +277,11 @@ export function IndividualInfo({ individual, data }: IndividualInfoProps) {
               </div>
             </div>
 
-            {/* Activity Heatmap */}
             <div className="space-y-3">
               <h4 className="font-semibold text-foreground flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 Activity Pattern (24h)
               </h4>
-              
               <div className="grid grid-cols-12 gap-1">
                 {Object.entries(stats?.timePattern || {}).map(([hour, count]) => (
                   <div
@@ -290,14 +299,12 @@ export function IndividualInfo({ individual, data }: IndividualInfoProps) {
               </div>
             </div>
 
-            {/* Most Frequent Contact */}
             {stats?.mostFrequentContact && (
               <div className="space-y-3">
                 <h4 className="font-semibold text-foreground flex items-center gap-2">
                   <Users className="w-4 h-4" />
                   Top Contact
                 </h4>
-                
                 <div className="bg-secondary/5 border border-secondary/20 rounded-lg p-3">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-full bg-secondary text-white">
@@ -314,14 +321,12 @@ export function IndividualInfo({ individual, data }: IndividualInfoProps) {
               </div>
             )}
 
-            {/* Suspicious Patterns */}
             {stats?.suspiciousPatterns && stats.suspiciousPatterns.length > 0 && (
               <div className="space-y-3">
                 <h4 className="font-semibold text-foreground flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-orange-500" />
                   Detected Patterns
                 </h4>
-                
                 <div className="space-y-2">
                   {stats.suspiciousPatterns.map((pattern, index) => (
                     <motion.div
@@ -339,21 +344,19 @@ export function IndividualInfo({ individual, data }: IndividualInfoProps) {
               </div>
             )}
 
-            {/* Recent Activity */}
             <div className="space-y-3">
               <h4 className="font-semibold text-foreground flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
                 Recent Activity
               </h4>
-              
               <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
-                {stats?.recentActivity.map((activity: any, index: number) => {
+                {stats?.recentActivity.map((activity, index) => {
                   const isOutgoing = String(activity["Numéro A"] || activity.caller || activity.source) === individual.phoneNumber;
                   const contact = isOutgoing 
                     ? String(activity["Numéro B"] || activity.called || activity.target)
                     : String(activity["Numéro A"] || activity.caller || activity.source);
                   const type = String(activity.Type || 'appel').toLowerCase();
-                  const date = new Date(activity.Date || activity.timestamp);
+                  const date = new Date(String(activity.Date || activity.timestamp));
                   
                   return (
                     <motion.div
@@ -378,7 +381,7 @@ export function IndividualInfo({ individual, data }: IndividualInfoProps) {
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {date.toLocaleDateString()} {date.toLocaleTimeString()}
+                          {!isNaN(date.getTime()) ? `${date.toLocaleDateString()} ${date.toLocaleTimeString()}` : 'Invalid date'}
                         </p>
                       </div>
                     </motion.div>
@@ -387,14 +390,12 @@ export function IndividualInfo({ individual, data }: IndividualInfoProps) {
               </div>
             </div>
 
-            {/* Additional Info */}
             {individual.imei && (
               <div className="space-y-3">
                 <h4 className="font-semibold text-foreground flex items-center gap-2">
                   <Smartphone className="w-4 h-4" />
                   Device Information
                 </h4>
-                
                 <div className="bg-muted/30 rounded-lg p-3">
                   <p className="text-sm text-muted-foreground">IMEI</p>
                   <p className="font-mono text-sm font-medium text-foreground">{individual.imei}</p>

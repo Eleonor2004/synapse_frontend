@@ -1,3 +1,5 @@
+// src/types/api.ts
+
 // --- Authentication Types ---
 export interface TokenResponse {
   access_token: string;
@@ -16,7 +18,7 @@ export interface User {
 export interface GraphNode {
   id: string;
   label: string;
-  properties: { [key: string]: any }; // A dictionary of any properties
+  properties: Record<string, unknown>; // A dictionary of any properties
 }
 
 export interface GraphEdge {
@@ -24,7 +26,7 @@ export interface GraphEdge {
   source: string;
   target: string;
   label: string;
-  properties: { [key: string]: any };
+  properties: Record<string, unknown>;
 }
 
 export interface GraphData {

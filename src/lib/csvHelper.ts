@@ -1,5 +1,5 @@
 // A simple utility to convert an array of objects to a CSV string
-export const convertToCSV = (data: any[]): string => {
+export const convertToCSV =<T extends Record<string, any>>(data: T[]): string => {
   if (!data || data.length === 0) {
     return "";
   }

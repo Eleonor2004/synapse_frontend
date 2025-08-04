@@ -1,23 +1,33 @@
 // src/components/workbench/FilterPanel.tsx
+
 "use client";
 
 import { useState } from "react";
 import { Search, Calendar, Phone, MessageSquare, Users, Hash } from "lucide-react";
 import { ExcelData } from "@/app/[locale]/workbench/page";
 
+// Define a specific type for the filters
+interface Filters {
+  interactionType: "all" | "calls" | "sms";
+  dateRange: { start: string; end: string };
+  individuals: string[];
+  minInteractions: number;
+}
+
 interface FilterPanelProps {
-  filters: any;
-  onFiltersChange: (filters: any) => void;
+  filters: Filters;
+  onFiltersChange: (filters: Filters) => void;
   data: ExcelData;
 }
 
 export function FilterPanel({ filters, onFiltersChange, data }: FilterPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const updateFilter = (key: string, value: any) => {
+  // Use generics for a type-safe update function
+  const updateFilter = <K extends keyof Filters>(key: K, value: Filters[K]) => {
     onFiltersChange({
       ...filters,
-      [key]: value
+      [key]: value,
     });
   };
 
@@ -26,7 +36,7 @@ export function FilterPanel({ filters, onFiltersChange, data }: FilterPanelProps
       interactionType: "all",
       dateRange: { start: "", end: "" },
       individuals: [],
-      minInteractions: 0
+      minInteractions: 0,
     });
     setSearchQuery("");
   };
@@ -74,7 +84,7 @@ export function FilterPanel({ filters, onFiltersChange, data }: FilterPanelProps
             {[
               { value: "all", label: "All Interactions", icon: Users },
               { value: "calls", label: "Calls Only", icon: Phone },
-              { value: "sms", label: "SMS Only", icon: MessageSquare }
+              { value: "sms", label: "SMS Only", icon: MessageSquare },
             ].map(({ value, label, icon: Icon }) => (
               <label key={value} className="flex items-center cursor-pointer">
                 <input
@@ -82,16 +92,19 @@ export function FilterPanel({ filters, onFiltersChange, data }: FilterPanelProps
                   name="interactionType"
                   value={value}
                   checked={filters.interactionType === value}
-                  onChange={(e) => updateFilter("interactionType", e.target.value)}
+                  onChange={(e) => updateFilter("interactionType", e.target.value as Filters['interactionType'])}
                   className="sr-only"
                 />
-                <div className={`
+                <div
+                  className={`
                   flex items-center gap-3 w-full p-3 rounded-lg border transition-all
-                  ${filters.interactionType === value
-                    ? "border-secondary bg-secondary/10 text-secondary"
-                    : "border-border hover:border-secondary/50 hover:bg-muted/50"
+                  ${
+                    filters.interactionType === value
+                      ? "border-secondary bg-secondary/10 text-secondary"
+                      : "border-border hover:border-secondary/50 hover:bg-muted/50"
                   }
-                `}>
+                `}
+                >
                   <Icon className="w-4 h-4" />
                   <span className="text-sm font-medium">{label}</span>
                 </div>
@@ -112,10 +125,12 @@ export function FilterPanel({ filters, onFiltersChange, data }: FilterPanelProps
               <input
                 type="date"
                 value={filters.dateRange.start}
-                onChange={(e) => updateFilter("dateRange", {
-                  ...filters.dateRange,
-                  start: e.target.value
-                })}
+                onChange={(e) =>
+                  updateFilter("dateRange", {
+                    ...filters.dateRange,
+                    start: e.target.value,
+                  })
+                }
                 className="w-full px-3 py-2 bg-background border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent"
               />
             </div>
@@ -124,10 +139,12 @@ export function FilterPanel({ filters, onFiltersChange, data }: FilterPanelProps
               <input
                 type="date"
                 value={filters.dateRange.end}
-                onChange={(e) => updateFilter("dateRange", {
-                  ...filters.dateRange,
-                  end: e.target.value
-                })}
+                onChange={(e) =>
+                  updateFilter("dateRange", {
+                    ...filters.dateRange,
+                    end: e.target.value,
+                  })
+                }
                 className="w-full px-3 py-2 bg-background border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent"
               />
             </div>
@@ -151,9 +168,7 @@ export function FilterPanel({ filters, onFiltersChange, data }: FilterPanelProps
             />
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>0</span>
-              <span className="font-medium text-secondary">
-                {filters.minInteractions}
-              </span>
+              <span className="font-medium text-secondary">{filters.minInteractions}</span>
               <span>100+</span>
             </div>
           </div>
@@ -161,20 +176,15 @@ export function FilterPanel({ filters, onFiltersChange, data }: FilterPanelProps
 
         {/* Quick Filters */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-3">
-            Quick Filters
-          </label>
+          <label className="block text-sm font-medium text-foreground mb-3">Quick Filters</label>
           <div className="grid grid-cols-1 gap-2">
             {[
               { key: "highActivity", label: "High Activity (50+ interactions)" },
               { key: "recentActivity", label: "Recent Activity (Last 7 days)" },
-              { key: "suspiciousPatterns", label: "Suspicious Patterns" }
+              { key: "suspiciousPatterns", label: "Suspicious Patterns" },
             ].map(({ key, label }) => (
               <label key={key} className="flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only"
-                />
+                <input type="checkbox" className="sr-only" />
                 <div className="flex items-center gap-3 w-full p-3 rounded-lg border border-border hover:border-secondary/50 hover:bg-muted/50 transition-all">
                   <div className="w-4 h-4 border border-border rounded flex-shrink-0" />
                   <span className="text-sm">{label}</span>
@@ -194,9 +204,7 @@ export function FilterPanel({ filters, onFiltersChange, data }: FilterPanelProps
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Unique Numbers:</span>
-              <span className="font-medium">
-                {data.subscribers?.length || 0}
-              </span>
+              <span className="font-medium">{data.subscribers?.length || 0}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Date Range:</span>
@@ -220,8 +228,8 @@ export function FilterPanel({ filters, onFiltersChange, data }: FilterPanelProps
 
         .slider::-moz-range-thumb {
           height: 20px;
-        } 
+        }
       `}</style>
-       </div>
+    </div>
   );
 }

@@ -1,0 +1,31 @@
+Failed to compile.
+./src/app/[locale]/dashboard/page.tsx
+241:91  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+241:98  Error: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.  react/no-unescaped-entities
+Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+20:17  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+21:18  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+30:12  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+70:22  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+./src/app/types/index.ts
+5:24  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+./src/components/auth/LoginForm.tsx
+./src/components/auth/LoginForm.tsx
+47:19  
+Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+130:17  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+143:6  
+./src/components/workbench/FilterPanel.tsx
+9:12  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+10:30  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+17:45  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+/src/components/workbench/IndividualInfo.tsx
+12:3  Warning: 'MapPin' is defined but never used.  @typescript-eslint/no-unused-vars
+15:3  Warning: 'TrendingDown' is defined but never used.  @typescript-eslint/no-unused-vars
+38:19  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+47:57  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+64:40  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+108:16  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+122:17  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+122:25  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+350:55  Error: Unexpected any. Specify

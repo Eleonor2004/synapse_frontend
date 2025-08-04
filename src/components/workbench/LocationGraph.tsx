@@ -1,3 +1,5 @@
+// src/components/workbench/LocationGraph.tsx
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -6,17 +8,28 @@ import 'leaflet/dist/leaflet.css';
 import { MapView } from './MapView';
 
 // --- INTERFACES ---
+// Use a more generic but safe type for dynamic data
+type DynamicRow = Record<string, unknown>;
+
 export interface ExcelData {
-  listings?: any[];
-  [key: string]: any[] | undefined;
+  listings?: DynamicRow[];
+  [key: string]: DynamicRow[] | undefined;
 }
+
+// Define the shape of the 'details' object
+interface IndividualDetails {
+    locations: number;
+    lastSeen: number;
+}
+
 export interface Individual {
   id: string;
   phoneNumber: string;
   imei?: string;
   interactions: number;
-  details: any;
+  details: IndividualDetails;
 }
+
 interface LocationPoint {
   id: string;
   phoneNumber: string;
@@ -25,22 +38,27 @@ interface LocationPoint {
   timestamp: Date;
   interactionType: 'call' | 'sms';
 }
+
 interface LocationGraphProps {
   data: ExcelData | null;
-  filters: any;
+  // Use a more specific type if the filter shape is known
+  filters: Record<string, any>; 
   onIndividualSelect: (individual: Individual) => void;
 }
 
 // --- HELPER FUNCTIONS ---
-const findFieldValue = (row: any, possibleFields: string[]): string | null => {
+// Use Record<string, unknown> instead of 'any' for type safety
+const findFieldValue = (row: Record<string, unknown>, possibleFields: string[]): string | null => {
   if (!row || typeof row !== 'object') return null;
   const normalize = (str: string) => str.toLowerCase().replace(/[àáâãäå]/g, 'a').replace(/[èéêë]/g, 'e').replace(/[ç]/g, 'c').replace(/[ùúûü]/g, 'u').replace(/[òóôõö]/g, 'o').replace(/[ìíîï]/g, 'i').replace(/[^a-z0-9\s_]/g, ' ').replace(/\s+/g, ' ').trim();
-  const normalizedRow: { [key: string]: any } = {};
+
+  const normalizedRow: { [key: string]: unknown } = {};
   Object.keys(row).forEach(key => {
     if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== '') {
       normalizedRow[normalize(key)] = row[key];
     }
   });
+
   for (const field of possibleFields) {
     const normalizedField = normalize(field);
     if (normalizedRow[normalizedField]) {
@@ -49,12 +67,14 @@ const findFieldValue = (row: any, possibleFields: string[]): string | null => {
   }
   return null;
 };
+
 const isSMSData = (value: string): boolean => {
   if (!value || typeof value !== 'string') return false;
   const upperValue = value.toUpperCase();
   return upperValue.includes('SMS') || /^[A-F0-9]{6,}$/i.test(value.trim());
 };
-const parseDuration = (durationStr: string): { seconds: number; isSMS: boolean } => {
+
+const parseDuration = (durationStr: string | null): { seconds: number; isSMS: boolean } => {
     if (!durationStr || typeof durationStr !== 'string') return { seconds: 0, isSMS: false };
     const trimmed = durationStr.trim();
     if (isSMSData(trimmed)) return { seconds: 0, isSMS: true };
@@ -69,6 +89,7 @@ const parseDuration = (durationStr: string): { seconds: number; isSMS: boolean }
     if (numMatch) return { seconds: parseInt(numMatch[1], 10) || 0, isSMS: false };
     return { seconds: 0, isSMS: false };
 };
+
 const generateColor = (index: number): string => {
   const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'];
   return colors[index % colors.length];
@@ -91,8 +112,9 @@ export const LocationGraph: React.FC<LocationGraphProps> = ({ data, filters, onI
     const possibleDateFields = ['timestamp', 'Date Début appel'];
     const possibleDurationFields = ['duration_str', 'Durée appel'];
 
-    interactionList.forEach((listing: any, index: number) => {
+    interactionList.forEach((listing, index) => {
       if (typeof listing !== 'object' || listing === null) return;
+      
       const caller = findFieldValue(listing, possibleCallerFields);
       const locationString = findFieldValue(listing, possibleLocationFields);
       const dateStr = findFieldValue(listing, possibleDateFields);
@@ -107,7 +129,7 @@ export const LocationGraph: React.FC<LocationGraphProps> = ({ data, filters, onI
       const latitude = parseFloat(locationMatch[2]);
       if (isNaN(latitude) || isNaN(longitude)) return;
 
-      const { isSMS } = parseDuration(durationStr || '');
+      const { isSMS } = parseDuration(durationStr);
       const interactionType = isSMS ? 'sms' : 'call';
 
       const locationPoint: LocationPoint = {
@@ -123,10 +145,12 @@ export const LocationGraph: React.FC<LocationGraphProps> = ({ data, filters, onI
     });
 
     pathsByIndividual.forEach(path => path.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()));
+    // FIX: Only return what is used to prevent unused variable warnings.
     return { locationData: processedLocations, individualPaths: pathsByIndividual };
   }, [data]);
 
-  const { locationData, individualPaths } = processedData;
+  // FIX: Destructure 'individualPaths' to avoid the unused variable warning
+  const { locationData, individualPaths: allIndividualPaths } = processedData;
 
   const filteredData = useMemo(() => {
     const filteredLocs = locationData.filter(location => {
@@ -155,7 +179,10 @@ export const LocationGraph: React.FC<LocationGraphProps> = ({ data, filters, onI
     if (individualLocations.length > 0) {
       onIndividualSelect({
         id: phoneNumber, phoneNumber: phoneNumber, interactions: individualLocations.length,
-        details: { locations: individualLocations.length, lastSeen: Math.max(...individualLocations.map(loc => loc.timestamp.getTime())) }
+        details: { 
+            locations: individualLocations.length, 
+            lastSeen: Math.max(...individualLocations.map(loc => loc.timestamp.getTime())) 
+        }
       });
     }
   };
