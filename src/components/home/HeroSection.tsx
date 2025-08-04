@@ -1,7 +1,8 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { motion, useScroll, useTransform } from 'framer-motion';
+// FIX: Import the 'Variants' type
+import { motion, useScroll, useTransform, Variants } from 'framer-motion';
 import { AnimatedShinyButton } from '../ui/AnimatedShinyButton';
 import { ArrowRight, Sparkles, Zap, Network } from 'lucide-react';
 import { useRef, useEffect, useState } from 'react';
@@ -109,7 +110,8 @@ const AnimatedStats = () => {
   );
 };
 
-const containerVariants = {
+// FIX: Explicitly type the constant with the 'Variants' type
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -120,7 +122,8 @@ const containerVariants = {
   },
 };
 
-const itemVariants = {
+// FIX: Explicitly type the constant with the 'Variants' type
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 30 },
   visible: {
     opacity: 1,
