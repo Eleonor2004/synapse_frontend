@@ -2,8 +2,8 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { Network, Users, Activity, Search, AlertCircle, Info } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Network, Users, Activity, Search, Phone, MessageSquare, MapPin, Smartphone, X, Zap } from 'lucide-react';
 import { ExcelData, Individual } from '@/app/[locale]/workbench/page';
 
 interface NetworkNode {
@@ -36,12 +36,18 @@ interface NetworkGraphProps {
   onIndividualSelect: (individual: Individual) => void; 
 }
 
+interface NodeDetailsProps {
+  node: NetworkNode;
+  edges: NetworkEdge[];
+  position: { x: number; y: number };
+  onClose: () => void;
+}
+
 // Helper Functions
 const cleanPhoneNumber = (phone: string): string | null => {
   if (!phone || typeof phone !== 'string') return null;
-  // Remove all non-digit characters except + at the start
   const cleaned = phone.replace(/[^\d+]/g, '');
-  if (cleaned.length < 7) return null; // Too short to be a valid phone number
+  if (cleaned.length < 7) return null;
   return cleaned;
 };
 
@@ -54,7 +60,6 @@ const isSMSData = (value: string): boolean => {
 const findFieldValue = (row: any, fields: string[]): string | null => {
   if (!row || typeof row !== 'object') return null;
   
-  // Normalize function to handle accents and special characters
   const normalize = (str: string) => str
     .toLowerCase()
     .replace(/[àáâãäå]/g, 'a')
@@ -67,7 +72,6 @@ const findFieldValue = (row: any, fields: string[]): string | null => {
     .replace(/\s+/g, ' ')
     .trim();
 
-  // Create normalized row
   const normalizedRow: { [key: string]: any } = {};
   Object.keys(row).forEach(key => {
     if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== '') {
@@ -75,7 +79,6 @@ const findFieldValue = (row: any, fields: string[]): string | null => {
     }
   });
 
-  // Search for fields
   for (const field of fields) {
     const normalizedField = normalize(field);
     if (normalizedRow[normalizedField]) {
@@ -92,7 +95,6 @@ const parseDuration = (durationStr: string): { seconds: number; isSMS: boolean }
   const trimmed = durationStr.trim();
   if (isSMSData(trimmed)) return { seconds: 0, isSMS: true };
   
-  // Try to parse time format (HH:MM:SS or MM:SS)
   const timeMatch = trimmed.match(/(\d+):(\d+)(?::(\d+))?/);
   if (timeMatch) {
     const h = timeMatch[3] ? parseInt(timeMatch[1], 10) || 0 : 0;
@@ -101,11 +103,89 @@ const parseDuration = (durationStr: string): { seconds: number; isSMS: boolean }
     return { seconds: (h * 3600) + (m * 60) + s, isSMS: false };
   }
   
-  // Try to parse just numbers
   const numMatch = trimmed.match(/(\d+)/);
   if (numMatch) return { seconds: parseInt(numMatch[1], 10) || 0, isSMS: false };
   
   return { seconds: 0, isSMS: false };
+};
+
+// Simplified color and size utilities
+const getEdgeColor = (interactions: number): string => {
+  if (interactions <= 2) return '#22c55e';
+  if (interactions <= 5) return '#eab308';
+  if (interactions <= 10) return '#f97316';
+  return '#ef4444';
+};
+
+const getNodeSize = (interactions: number): number => {
+  return Math.min(50, Math.max(20, interactions * 1.5 + 15));
+};
+
+// Compact Node Details Component
+const NodeDetails: React.FC<NodeDetailsProps> = ({ node, edges, position, onClose }) => {
+  const connectedEdges = edges.filter(edge => edge.from === node.id || edge.to === node.id);
+  const totalCalls = connectedEdges.reduce((sum, edge) => sum + edge.callCount, 0);
+  const totalSMS = connectedEdges.reduce((sum, edge) => sum + edge.smsCount, 0);
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      className="absolute z-50 bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-72"
+      style={{
+        left: Math.min(position.x - 144, window.innerWidth - 300),
+        top: Math.max(position.y - 100, 10),
+      }}
+    >
+      {/* Compact header */}
+      <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-lg">
+        <div className="flex items-center gap-2">
+          <Phone className="w-4 h-4" />
+          <span className="font-medium text-sm">{node.phoneNumber}</span>
+        </div>
+        <button onClick={onClose} className="p-1 hover:bg-white/20 rounded">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      <div className="p-3 space-y-3">
+        {/* Stats row */}
+        <div className="flex gap-2">
+          <div className="flex-1 bg-green-50 dark:bg-green-900/20 p-2 rounded text-center">
+            <div className="text-lg font-bold text-green-700 dark:text-green-400">{totalCalls}</div>
+            <div className="text-xs text-green-600 dark:text-green-500">Calls</div>
+          </div>
+          <div className="flex-1 bg-blue-50 dark:bg-blue-900/20 p-2 rounded text-center">
+            <div className="text-lg font-bold text-blue-700 dark:text-blue-400">{totalSMS}</div>
+            <div className="text-xs text-blue-600 dark:text-blue-500">SMS</div>
+          </div>
+          <div className="flex-1 bg-purple-50 dark:bg-purple-900/20 p-2 rounded text-center">
+            <div className="text-lg font-bold text-purple-700 dark:text-purple-400">{connectedEdges.length}</div>
+            <div className="text-xs text-purple-600 dark:text-purple-500">Links</div>
+          </div>
+        </div>
+
+        {/* Additional info if available */}
+        {(node.imei || node.location) && (
+          <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+            {node.imei && (
+              <div className="flex items-center gap-2 text-sm">
+                <Smartphone className="w-3 h-3 text-gray-500" />
+                <span className="text-gray-600 dark:text-gray-400 font-mono">{node.imei}</span>
+              </div>
+            )}
+            {node.location && (
+              <div className="flex items-center gap-2 text-sm">
+                <MapPin className="w-3 h-3 text-gray-500" />
+                <span className="text-gray-600 dark:text-gray-400">{node.location}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
 };
 
 export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onIndividualSelect }) => {
@@ -114,13 +194,12 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showDetails, setShowDetails] = useState(false);
+  const [detailsPosition, setDetailsPosition] = useState({ x: 0, y: 0 });
   
-  // MAIN DATA PROCESSING - This was missing!
+  // Data processing (keeping your original logic)
   const networkData = useMemo(() => {
-    console.log('Processing network data...', data);
-    
     if (!data?.listings || !Array.isArray(data.listings)) {
-      console.log('No listings found in data');
       return { nodes: [], edges: [] };
     }
 
@@ -139,7 +218,6 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
       totalDuration: number; 
     }>();
 
-    // Comprehensive field mappings to handle different data formats
     const callerFields = [
       'caller_num', 'caller', 'calling_number', 'from_number', 'source_number',
       'numéro appelant', 'numero appelant', 'appelant', 'émetteur', 'emetteur'
@@ -164,8 +242,7 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
       'localisation', 'localisation numéro appelant', 'localisation numero appelant'
     ];
 
-    // Process each interaction
-    data.listings.forEach((row: any, index: number) => {
+    data.listings.forEach((row: any) => {
       if (!row || typeof row !== 'object') return;
 
       const caller = findFieldValue(row, callerFields);
@@ -183,65 +260,37 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
 
       const { seconds, isSMS } = parseDuration(durationStr || '');
 
-      // Add caller to interactions
       if (cleanCaller) {
         if (!interactions.has(cleanCaller)) {
           interactions.set(cleanCaller, { 
-            calls: 0, 
-            sms: 0, 
-            totalDuration: 0, 
-            contacts: new Set(),
-            imei,
-            location
+            calls: 0, sms: 0, totalDuration: 0, contacts: new Set(), imei, location
           });
         }
         const callerData = interactions.get(cleanCaller)!;
-        if (isSMS) {
-          callerData.sms++;
-        } else {
-          callerData.calls++;
-          callerData.totalDuration += seconds;
-        }
+        if (isSMS) callerData.sms++; else { callerData.calls++; callerData.totalDuration += seconds; }
         if (cleanCallee) callerData.contacts.add(cleanCallee);
       }
 
-      // Add callee to interactions
       if (cleanCallee) {
         if (!interactions.has(cleanCallee)) {
           interactions.set(cleanCallee, { 
-            calls: 0, 
-            sms: 0, 
-            totalDuration: 0, 
-            contacts: new Set()
+            calls: 0, sms: 0, totalDuration: 0, contacts: new Set()
           });
         }
         const calleeData = interactions.get(cleanCallee)!;
-        if (isSMS) {
-          calleeData.sms++;
-        } else {
-          calleeData.calls++;
-          calleeData.totalDuration += seconds;
-        }
+        if (isSMS) calleeData.sms++; else { calleeData.calls++; calleeData.totalDuration += seconds; }
         if (cleanCaller) calleeData.contacts.add(cleanCaller);
       }
 
-      // Create edge between caller and callee
       if (cleanCaller && cleanCallee) {
         const edgeKey = [cleanCaller, cleanCallee].sort().join('|');
         if (!edgeMap.has(edgeKey)) {
           edgeMap.set(edgeKey, { calls: 0, sms: 0, totalDuration: 0 });
         }
         const edgeData = edgeMap.get(edgeKey)!;
-        if (isSMS) {
-          edgeData.sms++;
-        } else {
-          edgeData.calls++;
-          edgeData.totalDuration += seconds;
-        }
+        if (isSMS) edgeData.sms++; else { edgeData.calls++; edgeData.totalDuration += seconds; }
       }
     });
-
-    console.log(`Found ${interactions.size} unique phone numbers`);
 
     // Apply filters
     const filteredInteractions = new Map();
@@ -270,23 +319,20 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
     const nodes: NetworkNode[] = [];
     const phoneNumbers = Array.from(filteredInteractions.keys());
     
-    phoneNumbers.forEach((phone, index) => {
+    phoneNumbers.forEach((phone) => {
       const data = filteredInteractions.get(phone)!;
       const totalInteractions = data.calls + data.sms;
       
-      // Determine node type based on interaction patterns
       let nodeType: 'primary' | 'secondary' | 'service' = 'secondary';
       if (totalInteractions > 20) nodeType = 'primary';
       if (data.contacts.size > 10) nodeType = 'service';
       
-      // Size based on interactions (min 20, max 60)
-      const size = Math.min(60, Math.max(20, totalInteractions * 2));
+      const size = getNodeSize(totalInteractions);
       
-      // Color based on type
       const colors = {
-        primary: '#3B82F6',    // Blue
-        secondary: '#10B981',  // Green  
-        service: '#F59E0B'     // Amber
+        primary: '#3B82F6',
+        secondary: '#10B981',  
+        service: '#F59E0B'
       };
       
       nodes.push({
@@ -307,10 +353,9 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
     edgeMap.forEach((edgeData, edgeKey) => {
       const [phone1, phone2] = edgeKey.split('|');
       
-      // Only include edges where both nodes exist in filtered data
       if (filteredInteractions.has(phone1) && filteredInteractions.has(phone2)) {
         const totalInteractions = edgeData.calls + edgeData.sms;
-        const width = Math.min(10, Math.max(1, totalInteractions * 0.5));
+        const width = Math.min(8, Math.max(1, totalInteractions * 0.5));
         
         edges.push({
           id: edgeKey,
@@ -324,11 +369,9 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
       }
     });
 
-    console.log(`Created ${nodes.length} nodes and ${edges.length} edges`);
     return { nodes, edges };
   }, [data, filters]);
 
-  // This state holds the nodes with their calculated positions
   const [positionedNodes, setPositionedNodes] = useState<NetworkNode[]>([]);
   
   useEffect(() => {
@@ -339,9 +382,8 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
     
     const centerX = width / 2;
     const centerY = height / 2;
-    const radius = Math.min(width, height) * 0.3;
+    const radius = Math.min(width, height) * 0.35;
     
-    // Create a map of existing positions to preserve them
     const positionMap = new Map(positionedNodes.map(n => [n.id, { x: n.x, y: n.y }]));
 
     const newPositionedNodes = networkData.nodes.map((node, index) => {
@@ -351,9 +393,8 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
         return { ...node, x: existingPos.x, y: existingPos.y };
       }
       
-      // For new nodes, use circular layout
       const angle = (index / networkData.nodes.length) * 2 * Math.PI;
-      const nodeRadius = radius * (0.5 + Math.random() * 0.5); // Add some randomness
+      const nodeRadius = radius * (0.6 + Math.random() * 0.4);
       
       return {
         ...node,
@@ -374,15 +415,24 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
     };
     
     window.addEventListener('resize', handleResize);
-    handleResize(); // Initial size
+    handleResize();
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const handleNodeClick = (node: NetworkNode) => {
+  const handleNodeClick = (node: NetworkNode, event: React.MouseEvent) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
     const newSelectedNode = selectedNode?.id === node.id ? null : node;
     setSelectedNode(newSelectedNode);
     
     if (newSelectedNode) {
+      setDetailsPosition({ 
+        x: event.clientX - rect.left, 
+        y: event.clientY - rect.top 
+      });
+      setShowDetails(true);
+      
       onIndividualSelect({
         id: node.id,
         phoneNumber: node.phoneNumber,
@@ -394,6 +444,8 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
           location: node.location
         }
       });
+    } else {
+      setShowDetails(false);
     }
   };
 
@@ -427,50 +479,46 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
               'Could not find valid phone number interactions in the data'
             }
           </p>
-          {data?.listings && (
-            <div className="mt-4 text-sm text-muted-foreground">
-              <p>Processed {data.listings.length} rows from data source</p>
-              <p>Make sure your data contains phone number fields</p>
-            </div>
-          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col bg-card rounded-lg border overflow-hidden">
-      <div className="p-3 border-b border-border">
+    <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      {/* Clean header */}
+      <div className="p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold flex items-center gap-2">
-            <Network className="w-5 h-5" />
-            Network Analysis
+          <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <Network className="w-5 h-5 text-blue-600" />
+            Network Graph
           </h3>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
             <span className="flex items-center gap-1">
               <Users className="w-4 h-4" />
-              {networkData.nodes.length} nodes
+              {networkData.nodes.length}
             </span>
             <span className="flex items-center gap-1">
-              <Activity className="w-4 h-4" />
-              {networkData.edges.length} connections
+              <Zap className="w-4 h-4" />
+              {networkData.edges.length}
             </span>
           </div>
         </div>
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input 
             type="text" 
-            placeholder={`Search ${visibleNodes.length} nodes...`} 
+            placeholder="Search phone numbers..." 
             value={searchTerm} 
             onChange={(e) => setSearchTerm(e.target.value)} 
-            className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" 
+            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
           />
         </div>
       </div>
       
-      <div ref={containerRef} className="flex-1 relative overflow-hidden">
-        <svg width={dimensions.width} height={dimensions.height}>
+      {/* Graph area */}
+      <div ref={containerRef} className="flex-1 relative">
+        <svg width={dimensions.width} height={dimensions.height} className="w-full h-full">
           {/* Edges */}
           <g>
             {networkData.edges.map(edge => {
@@ -479,17 +527,20 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
               if (!fromNode || !toNode) return null;
 
               const isHighlighted = selectedNode && (connectedNodeIds.has(edge.from) && connectedNodeIds.has(edge.to));
+              const edgeColor = getEdgeColor(edge.interactions);
               
               return (
                 <motion.line
                   key={edge.id}
                   x1={fromNode.x} y1={fromNode.y}
                   x2={toNode.x} y2={toNode.y}
-                  stroke={isHighlighted ? "#fbbf24" : "#94a3b8"}
-                  strokeWidth={isHighlighted ? edge.width + 1.5 : edge.width}
-                  initial={{ opacity: 0.3 }}
-                  animate={{ opacity: isHighlighted ? 0.9 : selectedNode ? 0.1 : 0.4 }}
-                  transition={{ duration: 0.3 }}
+                  stroke={isHighlighted ? "#fbbf24" : edgeColor}
+                  strokeWidth={isHighlighted ? edge.width + 1 : edge.width}
+                  initial={{ opacity: 0 }}
+                  animate={{ 
+                    opacity: isHighlighted ? 0.9 : selectedNode ? 0.2 : 0.6
+                  }}
+                  transition={{ duration: 0.2 }}
                 />
               );
             })}
@@ -506,33 +557,50 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
               return (
                 <motion.g
                   key={node.id}
-                  onClick={() => handleNodeClick(node)}
+                  onClick={(e) => handleNodeClick(node, e as any)}
                   onMouseEnter={() => setHoveredNodeId(node.id)}
                   onMouseLeave={() => setHoveredNodeId(null)}
                   initial={{ x: dimensions.width / 2, y: dimensions.height / 2, scale: 0 }}
                   animate={{ 
                     x: node.x, 
                     y: node.y, 
-                    scale: isSelected ? 1.2 : 1, 
-                    opacity: isDimmed ? 0.2 : 1 
+                    scale: isSelected ? 1.2 : isHovered ? 1.1 : 1, 
+                    opacity: isDimmed ? 0.3 : 1 
                   }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                   className="cursor-pointer"
                 >
+                  {/* Selection ring */}
+                  {isSelected && (
+                    <circle
+                      r={node.size / 2 + 6}
+                      fill="none"
+                      stroke="#fbbf24"
+                      strokeWidth="2"
+                      opacity="0.8"
+                    />
+                  )}
+                  
+                  {/* Main node */}
                   <circle
                     r={node.size / 2}
                     fill={node.color}
-                    stroke={isSelected ? "#f59e0b" : isHovered ? node.color : "#ffffff"}
-                    strokeWidth={isSelected ? 3 : 2}
-                    strokeOpacity={isHovered || isSelected ? 1 : 0.5}
+                    stroke="white"
+                    strokeWidth="2"
+                    className="drop-shadow-md"
                   />
-                  {(isHovered || isSelected) && (
+                  
+                  {/* Phone number on hover */}
+                  {isHovered && (
                     <text 
                       textAnchor="middle" 
-                      y={node.size / 2 + 14} 
-                      fontSize="10px" 
-                      fill="currentColor" 
-                      className="font-semibold pointer-events-none select-none"
+                      y={node.size / 2 + 20} 
+                      fontSize="11px" 
+                      fill="white"
+                      stroke="rgba(0,0,0,0.8)"
+                      strokeWidth="3"
+                      paintOrder="stroke"
+                      className="font-medium"
                     >
                       {node.phoneNumber}
                     </text>
@@ -542,6 +610,66 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
             })}
           </g>
         </svg>
+        
+        {/* Node details popup */}
+        {showDetails && selectedNode && (
+          <NodeDetails
+            node={selectedNode}
+            edges={networkData.edges}
+            position={detailsPosition}
+            onClose={() => {
+              setShowDetails(false);
+              setSelectedNode(null);
+            }}
+          />
+        )}
+      </div>
+      
+      {/* Bottom legend */}
+      <div className="p-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between">
+          {/* Connection strength */}
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Connection:</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-1 bg-green-500 rounded"></div>
+                <span className="text-xs text-gray-600 dark:text-gray-400">Low</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-1 bg-yellow-500 rounded"></div>
+                <span className="text-xs text-gray-600 dark:text-gray-400">Med</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-1 bg-orange-500 rounded"></div>
+                <span className="text-xs text-gray-600 dark:text-gray-400">High</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-1 bg-red-500 rounded"></div>
+                <span className="text-xs text-gray-600 dark:text-gray-400">Max</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Node types */}
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Nodes:</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                <span className="text-xs text-gray-600 dark:text-gray-400">Primary</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+                <span className="text-xs text-gray-600 dark:text-gray-400">Secondary</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-amber-600 rounded-full"></div>
+                <span className="text-xs text-gray-600 dark:text-gray-400">Service</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
