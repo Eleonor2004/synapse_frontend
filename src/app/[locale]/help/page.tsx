@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Card } from "../../../components/ui/Card";
 import { Input } from "../../../components/ui/Input";
 import { Badge } from "../../../components/ui/Badge";
-import { Tabs, TabItem } from "../../../components/ui/Tabs"; // Import TabItem type if available from the component
+import { Tabs } from "../../../components/ui/Tabs"; // Import TabItem type if available from the component
 import { 
   Search, 
   Book, 
