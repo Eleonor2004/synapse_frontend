@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { User } from '../types/api';
+import { User } from '../../types/api';
 import { getMe } from '../../services/userService'; // We will create this service next
 
 interface AuthState {
