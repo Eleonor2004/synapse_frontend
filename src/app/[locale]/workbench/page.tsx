@@ -4,7 +4,7 @@
 
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { AxiosError } from "axios"; // Import AxiosError
+import { AxiosError } from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileUploader } from "../../../components/workbench/FileUploader";
 import { NetworkGraph } from "../../../components/workbench/NetworkGraph";
@@ -17,7 +17,6 @@ import { LayoutGrid, Map, List, Eye, Loader2, PanelLeftClose, PanelRightClose, P
 import { getMyListingSets, importListingsFile, getGraphDataForSets } from "../../../services/workbenchService";
 import { GraphResponse, ListingSet } from "../../../types/api";
 
-// Define a type for a row of data with unknown columns
 type DynamicRow = Record<string, unknown>;
 
 export interface ExcelData {
@@ -26,7 +25,6 @@ export interface ExcelData {
   [key: string]: DynamicRow[] | undefined;
 }
 
-// Define the shape of the 'details' object
 export interface IndividualDetails {
   type?: string;
   size?: number;
@@ -44,6 +42,14 @@ export interface Individual {
   details: IndividualDetails;
 }
 
+// FIX: Define the Filters interface to be used by the state
+interface Filters {
+  interactionType: "all" | "calls" | "sms";
+  dateRange: { start: string; end: string };
+  individuals: string[];
+  minInteractions: number;
+}
+
 export default function WorkbenchPage() {
   const { addNotification, notifications } = useNotifications();
   const queryClient = useQueryClient();
@@ -54,7 +60,9 @@ export default function WorkbenchPage() {
   const [activeView, setActiveView] = useState<"network" | "location">("network");
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(true);
   const [isIndividualPanelOpen, setIsIndividualPanelOpen] = useState(true);
-  const [filters, setFilters] = useState({
+  
+  // FIX: Explicitly type the useState hook with the Filters interface
+  const [filters, setFilters] = useState<Filters>({
     interactionType: "all",
     dateRange: { start: "", end: "" },
     individuals: [],
@@ -78,7 +86,7 @@ export default function WorkbenchPage() {
       addNotification("success", "Analysis Saved", `Analysis "${data.listing_set.name}" has been saved to your account.`);
       queryClient.invalidateQueries({ queryKey: ['listingSets'] });
     },
-    onError: (error: AxiosError<{ detail: string }>) => { // Correctly type the error
+    onError: (error: AxiosError<{ detail: string }>) => {
       addNotification("error", "Save Failed", error.response?.data?.detail || "Could not save the analysis to the server.");
     },
   });
@@ -92,7 +100,7 @@ export default function WorkbenchPage() {
     setSelectedIndividual(null);
     setActiveView('network');
 
-    uploadMutation.mutate({ name: analysisName, listings: parsedData.listings });
+    uploadMutation.mutate({ name: analysisName, listings: parsedData.listings as Record<string, unknown>[] });
   };
 
   const handleViewAnalysis = (listingSet: ListingSet) => {
@@ -112,9 +120,16 @@ export default function WorkbenchPage() {
     if (clientSideData) {
       return clientSideData;
     }
-    // Correctly process the nested GraphResponse structure
     if (remoteGraphData && remoteGraphData.network) {
-      return { listings: remoteGraphData.network.nodes.map(n => ({...n.properties, id: n.id})) }; // Example transformation
+        // A simple example of transforming API data to the format your components expect
+        const transformedListings = remoteGraphData.network.nodes.map(node => {
+            return {
+                id: node.id,
+                label: node.label,
+                ...node.properties
+            };
+        });
+        return { listings: transformedListings };
     }
     return null;
   }, [clientSideData, remoteGraphData]);

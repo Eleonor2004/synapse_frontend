@@ -31,6 +31,60 @@ interface ValidationResult {
   missingSheets: string[];
 }
 
+// FIX: Moved helper functions outside the component so they are not recreated on every render.
+const findSheetMatch = (sheetNames: string[], requiredSheet: string): string | null => {
+  const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const normalizedRequired = normalize(requiredSheet);
+  
+  const exactMatch = sheetNames.find(name => normalize(name) === normalizedRequired);
+  if (exactMatch) return exactMatch;
+
+  const alternatives = SHEET_ALTERNATIVES[requiredSheet] || [];
+  for (const alt of alternatives) {
+    const foundAlt = sheetNames.find(name => normalize(name) === normalize(alt));
+    if (foundAlt) return foundAlt;
+  }
+  return null;
+};
+
+const validateAndParseWorkbook = (workbook: XLSX.WorkBook): { data: ExcelData | null, validation: ValidationResult } => {
+  const sheetNames = workbook.SheetNames;
+  const missingSheets: string[] = [];
+  const alternativeSheets: { [key: string]: string } = {};
+
+  for (const requiredSheet of REQUIRED_SHEETS) {
+      const match = findSheetMatch(sheetNames, requiredSheet);
+      if (match) {
+          if (match !== requiredSheet) {
+            alternativeSheets[requiredSheet] = match;
+          }
+      } else {
+          missingSheets.push(requiredSheet);
+      }
+  }
+
+  const validation: ValidationResult = { isValid: missingSheets.length === 0, missingSheets };
+  if (!validation.isValid) {
+      return { data: null, validation };
+  }
+
+  const data: ExcelData = {};
+  const sheetMapping: { [key in keyof ExcelData]: string } = {
+      subscribers: "Abonné",
+      listings: "Listing",
+  };
+  
+  for (const [key, sheetName] of Object.entries(sheetMapping)) {
+      const actualSheetName = alternativeSheets[sheetName] || sheetName;
+      const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[actualSheetName], {
+        defval: null, raw: false, blankrows: false
+      });
+      data[key as keyof ExcelData] = sheetData as Record<string, unknown>[];
+  }
+  
+  return { data, validation };
+};
+
 export function FileUploader({ onUpload, onError }: FileUploaderProps) {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
@@ -45,61 +99,7 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
     setAnalysisName("");
     setIsProcessing(false);
   }, []);
-
-  const findSheetMatch = (sheetNames: string[], requiredSheet: string): string | null => {
-    const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const normalizedRequired = normalize(requiredSheet);
-    
-    const exactMatch = sheetNames.find(name => normalize(name) === normalizedRequired);
-    if (exactMatch) return exactMatch;
-
-    const alternatives = SHEET_ALTERNATIVES[requiredSheet] || [];
-    for (const alt of alternatives) {
-      const foundAlt = sheetNames.find(name => normalize(name) === normalize(alt));
-      if (foundAlt) return foundAlt;
-    }
-    return null;
-  };
-
-  const validateAndParseWorkbook = (workbook: XLSX.WorkBook): { data: ExcelData | null, validation: ValidationResult } => {
-    const sheetNames = workbook.SheetNames;
-    const missingSheets: string[] = [];
-    const alternativeSheets: { [key: string]: string } = {};
-
-    for (const requiredSheet of REQUIRED_SHEETS) {
-        const match = findSheetMatch(sheetNames, requiredSheet);
-        if (match) {
-            if (match !== requiredSheet) {
-              alternativeSheets[requiredSheet] = match;
-            }
-        } else {
-            missingSheets.push(requiredSheet);
-        }
-    }
-
-    const validation: ValidationResult = { isValid: missingSheets.length === 0, missingSheets };
-    if (!validation.isValid) {
-        return { data: null, validation };
-    }
-
-    const data: ExcelData = {};
-    const sheetMapping: { [key in keyof ExcelData]: string } = {
-        subscribers: "Abonné",
-        listings: "Listing",
-    };
-    
-    for (const [key, sheetName] of Object.entries(sheetMapping)) {
-        const actualSheetName = alternativeSheets[sheetName] || sheetName;
-        const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[actualSheetName], {
-          defval: null, raw: false, blankrows: false
-        });
-        data[key as keyof ExcelData] = sheetData as Record<string, unknown>[];
-    }
-    
-    return { data, validation };
-  };
-
-  // FIX: Wrap 'processFile' in its own useCallback hook
+  
   const processFile = useCallback(async (file: File) => {
     setIsProcessing(true);
     setValidationResult(null);
@@ -122,6 +122,7 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
         workbook = XLSX.read(buffer, { type: "array", cellDates: true });
       }
 
+      // Now calls the function defined outside the component
       const { data, validation } = validateAndParseWorkbook(workbook);
       setValidationResult(validation);
 
@@ -141,7 +142,7 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
     } finally {
       setIsProcessing(false);
     }
-  }, [onError, resetState]); // Dependencies for processFile
+  }, [onError, resetState]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -155,7 +156,7 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
         onUpload(parsedData, analysisName.trim());
     }
   }
-
+  
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
