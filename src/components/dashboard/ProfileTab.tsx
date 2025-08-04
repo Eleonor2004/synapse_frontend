@@ -1,50 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+// FIX: Import the 'Variants' type
+import { motion, Variants } from 'framer-motion';
+// FIX: Removed unused icon imports
 import { 
   User, 
-  Settings, 
-  Clock, 
-  BarChart3, 
-  Bell, 
-  Users, 
-  Menu, 
   X,
-  ChevronRight,
-  Home,
-  Sparkles,
   Calendar,
-  Shield,
   Award,
   TrendingUp,
-  Activity,
-  FileText,
   Camera,
   Mail,
   Phone,
   MapPin,
   Edit3,
   Save,
-  Upload,
-  Download,
-  Eye,
-  EyeOff,
-  Search,
-  Filter,
-  Plus,
-  MoreVertical,
-  Check,
-  AlertTriangle,
-  Info,
-  Sun,
-  Moon,
-  Laptop,
-  Globe
 } from 'lucide-react';
-// Animation variants
 
-const cardVariants = {
+// FIX: Explicitly type the constant with the 'Variants' type
+const cardVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
       opacity: 1, 
@@ -63,6 +38,7 @@ const cardVariants = {
       }
     }
   };
+
 // Profile Tab Component
 const ProfileTab = () => {
     const [isEditing, setIsEditing] = useState(false);
@@ -127,7 +103,6 @@ const ProfileTab = () => {
           >
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-xl border border-gray-200 dark:border-gray-700 backdrop-blur-sm">
               <div className="text-center">
-                {/* Avatar */}
                 <div className="relative inline-block mb-6">
                   <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-2xl shadow-purple-500/30">
                     <User className="w-12 h-12 text-white" />
@@ -152,7 +127,6 @@ const ProfileTab = () => {
                   {profileData.role}
                 </p>
   
-                {/* Quick Stats */}
                 <div className="space-y-4">
                   {stats.map((stat, index) => (
                     <motion.div
@@ -190,7 +164,6 @@ const ProfileTab = () => {
           >
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-xl border border-gray-200 dark:border-gray-700">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Full Name */}
                 <div className="space-y-3">
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                     <User className="w-4 h-4 text-purple-600" />
@@ -209,7 +182,6 @@ const ProfileTab = () => {
                   />
                 </div>
   
-                {/* Email */}
                 <div className="space-y-3">
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                     <Mail className="w-4 h-4 text-purple-600" />
@@ -228,7 +200,6 @@ const ProfileTab = () => {
                   />
                 </div>
   
-                {/* Phone */}
                 <div className="space-y-3">
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                     <Phone className="w-4 h-4 text-purple-600" />
@@ -247,7 +218,6 @@ const ProfileTab = () => {
                   />
                 </div>
   
-                {/* Location */}
                 <div className="space-y-3">
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                     <MapPin className="w-4 h-4 text-purple-600" />
@@ -267,7 +237,6 @@ const ProfileTab = () => {
                 </div>
               </div>
   
-              {/* Action Buttons */}
               {isEditing && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -300,4 +269,5 @@ const ProfileTab = () => {
       </motion.div>
     );
   };
-  export default ProfileTab;
+
+export default ProfileTab;

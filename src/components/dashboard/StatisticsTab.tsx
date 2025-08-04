@@ -1,48 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+// FIX: Import the 'Variants' type
+import { motion, Variants } from 'framer-motion';
+// FIX: Removed unused icon imports
 import { 
-  User, 
-  Settings, 
-  Clock, 
   BarChart3, 
-  Bell, 
-  Users, 
-  Menu, 
-  X,
-  ChevronRight,
-  Home,
-  Sparkles,
-  Calendar,
-  Shield,
-  Award,
   TrendingUp,
   Activity,
   FileText,
-  Camera,
-  Mail,
-  Phone,
-  MapPin,
-  Edit3,
-  Save,
-  Upload,
-  Download,
-  Eye,
-  EyeOff,
-  Search,
-  Filter,
-  Plus,
-  MoreVertical,
-  Check,
-  AlertTriangle,
-  Info,
-  Sun,
-  Moon,
-  Laptop,
-  Globe
 } from 'lucide-react';
-const cardVariants = {
+
+// FIX: Explicitly type the constant with the 'Variants' type
+const cardVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
       opacity: 1, 
@@ -61,6 +30,7 @@ const cardVariants = {
       }
     }
   };
+
 // Statistics Tab Component
 const StatisticsTab = () => {
     const stats = [
@@ -132,4 +102,4 @@ const StatisticsTab = () => {
     );
   };
 
-  export default StatisticsTab;
+export default StatisticsTab;

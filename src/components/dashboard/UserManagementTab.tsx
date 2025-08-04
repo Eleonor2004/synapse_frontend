@@ -1,49 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+// FIX: Import the 'Variants' type
+import { motion, Variants } from 'framer-motion';
+// FIX: Removed unused icon imports
 import { 
-  User, 
-  Settings, 
-  Clock, 
-  BarChart3, 
-  Bell, 
-  Users, 
-  Menu, 
-  X,
-  ChevronRight,
-  Home,
-  Sparkles,
-  Calendar,
-  Shield,
-  Award,
-  TrendingUp,
-  Activity,
-  FileText,
-  Camera,
-  Mail,
-  Phone,
-  MapPin,
-  Edit3,
-  Save,
-  Upload,
-  Download,
-  Eye,
-  EyeOff,
   Search,
   Filter,
   Plus,
+  Eye,
+  Edit3,
   MoreVertical,
-  Check,
-  AlertTriangle,
-  Info,
-  Sun,
-  Moon,
-  Laptop,
-  Globe
 } from 'lucide-react';
 
-const cardVariants = {
+// FIX: Explicitly type the constant with the 'Variants' type
+const cardVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
       opacity: 1, 
@@ -62,6 +33,7 @@ const cardVariants = {
       }
     }
   };
+
 // User Management Tab Component
 const UserManagementTab = () => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -73,13 +45,13 @@ const UserManagementTab = () => {
         { id: 4, name: 'Lisa Chen', email: 'lisa@company.com', role: 'Analyst', status: 'Active', avatar: 'LC' }
       ]);
   
-    const getStatusColor = (status) => {
+    const getStatusColor = (status: 'Active' | 'Inactive') => {
       return status === 'Active' 
         ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' 
         : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400';
     };
   
-    const getRoleColor = (role) => {
+    const getRoleColor = (role: 'Admin' | 'Analyst' | 'Viewer') => {
       switch (role) {
         case 'Admin':
           return 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400';
@@ -190,12 +162,12 @@ const UserManagementTab = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role)}`}>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRoleColor(user.role as 'Admin' | 'Analyst' | 'Viewer')}`}>
                         {user.role}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(user.status)}`}>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(user.status as 'Active' | 'Inactive')}`}>
                         {user.status}
                       </span>
                     </td>
@@ -233,4 +205,5 @@ const UserManagementTab = () => {
       </motion.div>
     );
   };
-export default UserManagementTab
+
+export default UserManagementTab;

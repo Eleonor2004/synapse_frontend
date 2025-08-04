@@ -1,48 +1,22 @@
+// src/components/dashboard/SettingsTab.tsx
+
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+// FIX: Import the 'Variants' type
+import { motion, Variants } from 'framer-motion';
+// FIX: Removed unused icon imports
 import { 
-  User, 
-  Settings, 
-  Clock, 
-  BarChart3, 
   Bell, 
-  Users, 
-  Menu, 
-  X,
-  ChevronRight,
-  Home,
-  Sparkles,
-  Calendar,
-  Shield,
-  Award,
-  TrendingUp,
-  Activity,
-  FileText,
-  Camera,
-  Mail,
-  Phone,
-  MapPin,
-  Edit3,
-  Save,
-  Upload,
-  Download,
-  Eye,
-  EyeOff,
-  Search,
-  Filter,
-  Plus,
-  MoreVertical,
   Check,
-  AlertTriangle,
-  Info,
   Sun,
   Moon,
   Laptop,
   Globe
 } from 'lucide-react';
-const cardVariants = {
+
+// FIX: Explicitly type the constant with the 'Variants' type
+const cardVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
       opacity: 1, 
@@ -61,6 +35,7 @@ const cardVariants = {
       }
     }
   };
+
 // Settings Tab Component
 const SettingsTab = () => {
     const [theme, setTheme] = useState('system');
@@ -181,7 +156,7 @@ const SettingsTab = () => {
                   }`}>
                     Enable Push Notifications
                   </span>
-                                    <div className={`w-12 h-6 rounded-full transition-all duration-300 ${
+                  <div className={`w-12 h-6 rounded-full transition-all duration-300 ${
                     notifications ? 'bg-purple-600' : 'bg-gray-300 dark:bg-gray-600'
                   }`}>
                     <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 mt-0.5 ${
@@ -196,4 +171,5 @@ const SettingsTab = () => {
       </motion.div>
     );
   };
-export default SettingsTab
+
+export default SettingsTab;

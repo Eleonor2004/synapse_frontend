@@ -1,48 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+// FIX: Import the 'Variants' type
+import { motion, Variants } from 'framer-motion';
+// FIX: Removed unused icon imports
 import { 
-  User, 
-  Settings, 
-  Clock, 
-  BarChart3, 
-  Bell, 
-  Users, 
-  Menu, 
-  X,
-  ChevronRight,
-  Home,
-  Sparkles,
-  Calendar,
-  Shield,
-  Award,
-  TrendingUp,
-  Activity,
-  FileText,
-  Camera,
-  Mail,
-  Phone,
-  MapPin,
-  Edit3,
-  Save,
-  Upload,
-  Download,
-  Eye,
-  EyeOff,
-  Search,
-  Filter,
-  Plus,
-  MoreVertical,
   Check,
   AlertTriangle,
   Info,
-  Sun,
-  Moon,
-  Laptop,
-  Globe
+  User, 
 } from 'lucide-react';
-const cardVariants = {
+
+// FIX: Explicitly type the constant with the 'Variants' type
+const cardVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
       opacity: 1, 
@@ -61,6 +30,10 @@ const cardVariants = {
       }
     }
   };
+
+// Define a specific type for notification types
+type NotificationType = 'success' | 'warning' | 'info';
+
 // Notifications Tab Component
 const NotificationsTab = () => {
     const notifications = [
@@ -69,7 +42,7 @@ const NotificationsTab = () => {
         title: 'System Update Available', 
         message: 'A new version of the dashboard is ready to install',
         time: '2 hours ago',
-        type: 'info',
+        type: 'info' as NotificationType,
         unread: true
       },
       { 
@@ -77,7 +50,7 @@ const NotificationsTab = () => {
         title: 'Data Backup Completed', 
         message: 'Your monthly data backup has been successfully completed',
         time: '1 day ago',
-        type: 'success',
+        type: 'success' as NotificationType,
         unread: true
       },
       { 
@@ -85,7 +58,7 @@ const NotificationsTab = () => {
         title: 'Storage Warning', 
         message: 'You are approaching your storage limit (85% used)',
         time: '2 days ago',
-        type: 'warning',
+        type: 'warning' as NotificationType,
         unread: false
       },
       { 
@@ -93,12 +66,13 @@ const NotificationsTab = () => {
         title: 'New Team Member Added', 
         message: 'Sarah Johnson has joined your analytics team',
         time: '3 days ago',
-        type: 'info',
+        type: 'info' as NotificationType,
         unread: false
       }
     ];
   
-    const getTypeStyles = (type) => {
+    // Add type for the 'type' parameter
+    const getTypeStyles = (type: NotificationType) => {
       switch (type) {
         case 'success':
           return {
@@ -207,4 +181,5 @@ const NotificationsTab = () => {
       </motion.div>
     );
   };
+
 export default NotificationsTab;
