@@ -42,7 +42,6 @@ export interface Individual {
   details: IndividualDetails;
 }
 
-// FIX: Define the Filters interface to be used by the state
 interface Filters {
   interactionType: "all" | "calls" | "sms";
   dateRange: { start: string; end: string };
@@ -51,7 +50,8 @@ interface Filters {
 }
 
 export default function WorkbenchPage() {
-  const { addNotification, notifications } = useNotifications();
+  // FIX: Destructure 'removeNotification' from the hook
+  const { addNotification, notifications, removeNotification } = useNotifications();
   const queryClient = useQueryClient();
 
   const [selectedListingSet, setSelectedListingSet] = useState<ListingSet | null>(null);
@@ -61,7 +61,6 @@ export default function WorkbenchPage() {
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(true);
   const [isIndividualPanelOpen, setIsIndividualPanelOpen] = useState(true);
   
-  // FIX: Explicitly type the useState hook with the Filters interface
   const [filters, setFilters] = useState<Filters>({
     interactionType: "all",
     dateRange: { start: "", end: "" },
@@ -121,7 +120,6 @@ export default function WorkbenchPage() {
       return clientSideData;
     }
     if (remoteGraphData && remoteGraphData.network) {
-        // A simple example of transforming API data to the format your components expect
         const transformedListings = remoteGraphData.network.nodes.map(node => {
             return {
                 id: node.id,
@@ -254,7 +252,8 @@ export default function WorkbenchPage() {
   return (
     <AuthGuard>
       <div className="min-h-screen bg-background text-foreground">
-        <NotificationContainer notifications={notifications} />
+        {/* FIX: Pass the 'removeNotification' prop to the container */}
+        <NotificationContainer notifications={notifications} removeNotification={removeNotification} />
         <header className="h-[60px] border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50 flex items-center px-6">
             <h1 className="text-xl font-bold">Analysis Workbench</h1>
         </header>
