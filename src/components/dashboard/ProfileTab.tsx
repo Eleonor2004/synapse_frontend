@@ -1,446 +1,303 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+'use client';
+
+import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { 
   User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Camera, 
-  Save, 
-  Edit3,
-  Check,
+  Settings, 
+  Clock, 
+  BarChart3, 
+  Bell, 
+  Users, 
+  Menu, 
   X,
-  Upload,
-  Badge,
+  ChevronRight,
+  Home,
+  Sparkles,
   Calendar,
   Shield,
-  BarChart3,
-  Trophy,
-  Star,
+  Award,
+  TrendingUp,
   Activity,
-  Zap
+  FileText,
+  Camera,
+  Mail,
+  Phone,
+  MapPin,
+  Edit3,
+  Save,
+  Upload,
+  Download,
+  Eye,
+  EyeOff,
+  Search,
+  Filter,
+  Plus,
+  MoreVertical,
+  Check,
+  AlertTriangle,
+  Info,
+  Sun,
+  Moon,
+  Laptop,
+  Globe
 } from 'lucide-react';
+// Animation variants
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
+const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: {
+        duration: 0.4,
+        ease: [0.4, 0, 0.2, 1]
+      }
+    },
+    hover: {
+      y: -5,
+      scale: 1.02,
+      transition: {
+        duration: 0.2,
+        ease: "easeOut"
+      }
     }
-  }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.4,
-      ease: [0.4, 0, 0.2, 1]
-    }
-  }
-};
-
-export const ProfileTab = () => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [profileData, setProfileData] = useState({
-    name: 'Analyst User',
-    email: 'analyst@synapse.app',
-    phone: '+1 (555) 123-4567',
-    location: 'San Francisco, CA',
-    role: 'Senior Data Analyst',
-    joinDate: 'January 2023',
-    bio: 'Passionate data analyst with expertise in machine learning and statistical modeling.'
-  });
-
-  const [tempData, setTempData] = useState(profileData);
-  const [uploadProgress, setUploadProgress] = useState(0);
-
-  const handleSave = () => {
-    // Simulate save animation
-    setUploadProgress(0);
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setProfileData(tempData);
-          setIsEditing(false);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 100);
   };
-
-  const handleCancel = () => {
-    setTempData(profileData);
-    setIsEditing(false);
-  };
-
-  const stats = [
-    { label: 'Projects Completed', value: '47', icon: Trophy, color: 'from-yellow-400 to-orange-500', bgColor: 'from-yellow-500/10 to-orange-500/10' },
-    { label: 'Years Active', value: '2.5', icon: Calendar, color: 'from-blue-400 to-purple-500', bgColor: 'from-blue-500/10 to-purple-500/10' },
-    { label: 'Team Rating', value: '4.9', icon: Star, color: 'from-green-400 to-teal-500', bgColor: 'from-green-500/10 to-teal-500/10' },
-    { label: 'Active Projects', value: '8', icon: Activity, color: 'from-pink-400 to-red-500', bgColor: 'from-pink-500/10 to-red-500/10' },
-  ];
-
-  const achievements = [
-    { title: 'Data Wizard', description: 'Completed 50+ analyses', icon: Zap, color: 'text-yellow-500' },
-    { title: 'Team Player', description: 'Collaborated on 25+ projects', icon: Shield, color: 'text-blue-500' },
-    { title: 'Innovation Leader', description: 'Introduced 3 new methodologies', icon: Trophy, color: 'text-purple-500' }
-  ];
-
-  return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="space-y-8"
-    >
-      {/* Header with Action Button */}
-      <motion.div variants={itemVariants} className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold brand-gradient-text mb-2">Profile Overview</h2>
-          <p className="text-muted-foreground text-lg">Manage your personal information and preferences.</p>
-        </div>
-        
-        <motion.button
-          onClick={() => setIsEditing(!isEditing)}
-          className={`flex items-center gap-3 px-6 py-3 rounded-2xl font-semibold transition-all duration-300 ${
-            isEditing 
-              ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/30'
-              : 'bg-gradient-primary text-white shadow-primary hover:shadow-xl hover:scale-105'
-          }`}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+// Profile Tab Component
+const ProfileTab = () => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [profileData, setProfileData] = useState({
+      name: 'Alex Johnson',
+      email: 'alex.johnson@company.com',
+      phone: '+1 (555) 123-4567',
+      location: 'San Francisco, CA',
+      role: 'Senior Data Analyst',
+      department: 'Analytics',
+      joinDate: 'January 2023'
+    });
+  
+    const stats = [
+      { label: 'Projects', value: '47', icon: Award, color: 'from-emerald-500 to-teal-500', bg: 'bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20' },
+      { label: 'Experience', value: '3.5Y', icon: Calendar, color: 'from-blue-500 to-indigo-500', bg: 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20' },
+      { label: 'Team Rank', value: '#3', icon: TrendingUp, color: 'from-purple-500 to-pink-500', bg: 'bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20' },
+    ];
+  
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="space-y-8"
+      >
+        {/* Header */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between"
         >
-          {isEditing ? (
-            <>
-              <X className="w-5 h-5" />
-              Cancel Changes
-            </>
-          ) : (
-            <>
-              <Edit3 className="w-5 h-5" />
-              Edit Profile
-            </>
-          )}
-        </motion.button>
-      </motion.div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-        {/* Profile Summary Card */}
-        <motion.div
-          variants={itemVariants}
-          className="xl:col-span-1"
-        >
-          <div className="glass-card hover-lift h-fit sticky top-8">
-            <div className="text-center">
-              {/* Avatar with Upload */}
-              <div className="relative inline-block mb-6">
-                <div className="w-32 h-32 rounded-3xl bg-gradient-primary flex items-center justify-center shadow-2xl shadow-primary/30 relative overflow-hidden">
-                  <User className="w-16 h-16 text-white" />
-                  {/* Animated ring */}
-                  <motion.div
-                    className="absolute inset-0 rounded-3xl border-4 border-white/20"
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                  />
-                </div>
-                {isEditing && (
-                  <motion.button
-                    initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    className="absolute -bottom-2 -right-2 bg-accent border-2 border-primary rounded-2xl p-3 hover:bg-primary hover:text-white transition-all duration-200 shadow-lg"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <Camera className="w-5 h-5" />
-                  </motion.button>
-                )}
-              </div>
-
-              {/* User Info */}
-              <h3 className="text-2xl font-bold text-foreground mb-2">
-                {profileData.name}
-              </h3>
-              <p className="text-muted-foreground mb-2">
-                {profileData.role}
-              </p>
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-6">
-                <MapPin className="w-4 h-4" />
-                {profileData.location}
-              </div>
-
-              {/* Bio */}
-              <div className="text-left bg-accent/20 rounded-2xl p-4 mb-6">
-                <h4 className="font-semibold text-foreground mb-2">About</h4>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {profileData.bio}
-                </p>
-              </div>
-
-              {/* Quick Stats Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                {stats.map((stat, index) => (
-                  <motion.div
-                    key={stat.label}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ 
-                      opacity: 1, 
-                      scale: 1,
-                      transition: { delay: 0.4 + index * 0.1 }
-                    }}
-                    className={`p-4 rounded-2xl bg-gradient-to-br ${stat.bgColor} border border-white/10 text-center hover-lift`}
-                  >
-                    <div className={`w-8 h-8 rounded-xl bg-gradient-to-r ${stat.color} flex items-center justify-center mx-auto mb-2`}>
-                      <stat.icon className="w-4 h-4 text-white" />
-                    </div>
-                    <p className="text-lg font-bold text-foreground">{stat.value}</p>
-                    <p className="text-xs text-muted-foreground">{stat.label}</p>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
+          <div>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent mb-2">
+              Profile Settings
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">Manage your personal information and preferences</p>
           </div>
+          
+          <motion.button
+            onClick={() => setIsEditing(!isEditing)}
+            className={`flex items-center gap-3 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${
+              isEditing 
+                ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg shadow-red-500/25'
+                : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40'
+            }`}
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            {isEditing ? <X className="w-5 h-5" /> : <Edit3 className="w-5 h-5" />}
+            {isEditing ? 'Cancel' : 'Edit Profile'}
+          </motion.button>
         </motion.div>
-
-        {/* Main Content Area */}
-        <motion.div
-          variants={itemVariants}
-          className="xl:col-span-3 space-y-8"
-        >
-          {/* Personal Information Form */}
-          <div className="glass-card">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center">
-                <User className="w-5 h-5 text-white" />
+  
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Profile Card */}
+          <motion.div
+            variants={cardVariants}
+            initial="hidden"
+            animate="visible"
+            whileHover="hover"
+            className="lg:col-span-1"
+          >
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-xl border border-gray-200 dark:border-gray-700 backdrop-blur-sm">
+              <div className="text-center">
+                {/* Avatar */}
+                <div className="relative inline-block mb-6">
+                  <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-2xl shadow-purple-500/30">
+                    <User className="w-12 h-12 text-white" />
+                  </div>
+                  {isEditing && (
+                    <motion.button
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute -bottom-2 -right-2 bg-white dark:bg-gray-800 border-2 border-purple-500 rounded-full p-3 hover:bg-purple-50 dark:hover:bg-gray-700 transition-colors shadow-lg"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <Camera className="w-4 h-4 text-purple-600" />
+                    </motion.button>
+                  )}
+                </div>
+  
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                  {profileData.name}
+                </h3>
+                <p className="text-purple-600 dark:text-purple-400 font-medium mb-6">
+                  {profileData.role}
+                </p>
+  
+                {/* Quick Stats */}
+                <div className="space-y-4">
+                  {stats.map((stat, index) => (
+                    <motion.div
+                      key={stat.label}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ 
+                        opacity: 1, 
+                        x: 0,
+                        transition: { delay: 0.3 + index * 0.1 }
+                      }}
+                      className={`${stat.bg} rounded-xl p-4 border border-gray-200 dark:border-gray-700`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg bg-gradient-to-r ${stat.color}`}>
+                            <stat.icon className="w-4 h-4 text-white" />
+                          </div>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{stat.label}</span>
+                        </div>
+                        <span className="font-bold text-gray-900 dark:text-white">{stat.value}</span>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
               </div>
-              <h3 className="text-xl font-semibold text-foreground">Personal Information</h3>
             </div>
-
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          </motion.div>
+  
+          {/* Profile Form */}
+          <motion.div
+            variants={cardVariants}
+            initial="hidden"
+            animate="visible"
+            className="lg:col-span-3"
+          >
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-xl border border-gray-200 dark:border-gray-700">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Full Name */}
-                <motion.div 
-                  className="space-y-2"
-                  whileHover={{ scale: 1.01 }}
-                >
-                  <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <User className="w-4 h-4 text-primary" />
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    <User className="w-4 h-4 text-purple-600" />
                     Full Name
                   </label>
-                  <input
+                  <motion.input
                     type="text"
-                    value={isEditing ? tempData.name : profileData.name}
-                    onChange={(e) => setTempData({...tempData, name: e.target.value})}
+                    value={profileData.name}
                     disabled={!isEditing}
-                    className={`input-modern ${isEditing ? 'ring-2 ring-primary/20' : 'opacity-70'}`}
+                    className={`w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl transition-all duration-300 ${
+                      isEditing 
+                        ? 'focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900 dark:text-white' 
+                        : 'cursor-not-allowed text-gray-500 dark:text-gray-400'
+                    }`}
+                    whileFocus={{ scale: 1.02 }}
                   />
-                </motion.div>
-
+                </div>
+  
                 {/* Email */}
-                <motion.div 
-                  className="space-y-2"
-                  whileHover={{ scale: 1.01 }}
-                >
-                  <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <Mail className="w-4 h-4 text-primary" />
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    <Mail className="w-4 h-4 text-purple-600" />
                     Email Address
                   </label>
-                  <input
+                  <motion.input
                     type="email"
-                    value={isEditing ? tempData.email : profileData.email}
-                    onChange={(e) => setTempData({...tempData, email: e.target.value})}
+                    value={profileData.email}
                     disabled={!isEditing}
-                    className={`input-modern ${isEditing ? 'ring-2 ring-primary/20' : 'opacity-70'}`}
+                    className={`w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl transition-all duration-300 ${
+                      isEditing 
+                        ? 'focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900 dark:text-white' 
+                        : 'cursor-not-allowed text-gray-500 dark:text-gray-400'
+                    }`}
+                    whileFocus={{ scale: 1.02 }}
                   />
-                </motion.div>
-
+                </div>
+  
                 {/* Phone */}
-                <motion.div 
-                  className="space-y-2"
-                  whileHover={{ scale: 1.01 }}
-                >
-                  <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <Phone className="w-4 h-4 text-primary" />
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    <Phone className="w-4 h-4 text-purple-600" />
                     Phone Number
                   </label>
-                  <input
+                  <motion.input
                     type="tel"
-                    value={isEditing ? tempData.phone : profileData.phone}
-                    onChange={(e) => setTempData({...tempData, phone: e.target.value})}
+                    value={profileData.phone}
                     disabled={!isEditing}
-                    className={`input-modern ${isEditing ? 'ring-2 ring-primary/20' : 'opacity-70'}`}
+                    className={`w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl transition-all duration-300 ${
+                      isEditing 
+                        ? 'focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900 dark:text-white' 
+                        : 'cursor-not-allowed text-gray-500 dark:text-gray-400'
+                    }`}
+                    whileFocus={{ scale: 1.02 }}
                   />
-                </motion.div>
-
+                </div>
+  
                 {/* Location */}
-                <motion.div 
-                  className="space-y-2"
-                  whileHover={{ scale: 1.01 }}
-                >
-                  <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <MapPin className="w-4 h-4 text-primary" />
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    <MapPin className="w-4 h-4 text-purple-600" />
                     Location
                   </label>
-                  <input
+                  <motion.input
                     type="text"
-                    value={isEditing ? tempData.location : profileData.location}
-                    onChange={(e) => setTempData({...tempData, location: e.target.value})}
+                    value={profileData.location}
                     disabled={!isEditing}
-                    className={`input-modern ${isEditing ? 'ring-2 ring-primary/20' : 'opacity-70'}`}
+                    className={`w-full px-4 py-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl transition-all duration-300 ${
+                      isEditing 
+                        ? 'focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900 dark:text-white' 
+                        : 'cursor-not-allowed text-gray-500 dark:text-gray-400'
+                    }`}
+                    whileFocus={{ scale: 1.02 }}
                   />
-                </motion.div>
-              </div>
-
-              {/* Role and Bio */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <motion.div 
-                  className="space-y-2"
-                  whileHover={{ scale: 1.01 }}
-                >
-                  <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <Badge className="w-4 h-4 text-primary" />
-                    Role
-                  </label>
-                  <input
-                    type="text"
-                    value={isEditing ? tempData.role : profileData.role}
-                    onChange={(e) => setTempData({...tempData, role: e.target.value})}
-                    disabled={!isEditing}
-                    className={`input-modern ${isEditing ? 'ring-2 ring-primary/20' : 'opacity-70'}`}
-                  />
-                </motion.div>
-
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <Calendar className="w-4 h-4 text-primary" />
-                    Member Since
-                  </label>
-                  <div className="input-modern bg-muted/50 text-muted-foreground cursor-not-allowed">
-                    {profileData.joinDate}
-                  </div>
                 </div>
               </div>
-
-              {/* Bio */}
-              <motion.div 
-                className="space-y-2"
-                whileHover={{ scale: 1.01 }}
-              >
-                <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <Edit3 className="w-4 h-4 text-primary" />
-                  Bio
-                </label>
-                <textarea
-                  value={isEditing ? tempData.bio : profileData.bio}
-                  onChange={(e) => setTempData({...tempData, bio: e.target.value})}
-                  disabled={!isEditing}
-                  rows={3}
-                  className={`input-modern resize-none ${isEditing ? 'ring-2 ring-primary/20' : 'opacity-70'}`}
-                />
-              </motion.div>
-
+  
               {/* Action Buttons */}
-              <AnimatePresence>
-                {isEditing && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="flex gap-4 pt-6 border-t border-border/50"
-                  >
-                    <motion.button
-                      type="button"
-                      onClick={handleSave}
-                      className="btn-primary flex-1 relative overflow-hidden"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <div className="flex items-center justify-center gap-2">
-                        <Check className="w-5 h-5" />
-                        Save Changes
-                      </div>
-                      {uploadProgress > 0 && uploadProgress < 100 && (
-                        <motion.div
-                          className="absolute bottom-0 left-0 h-1 bg-white/30"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${uploadProgress}%` }}
-                        />
-                      )}
-                    </motion.button>
-
-                    <motion.button
-                      type="button"
-                      onClick={handleCancel}
-                      className="btn-ghost"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <X className="w-5 h-5 mr-2" />
-                      Cancel
-                    </motion.button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-
-          {/* Achievements Section */}
-          <div className="glass-card">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-gradient-secondary flex items-center justify-center">
-                <Trophy className="w-5 h-5 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-foreground">Achievements</h3>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {achievements.map((achievement, index) => (
+              {isEditing && (
                 <motion.div
-                  key={achievement.title}
                   initial={{ opacity: 0, y: 20 }}
-                  animate={{ 
-                    opacity: 1, 
-                    y: 0,
-                    transition: { delay: 0.6 + index * 0.1 }
-                  }}
-                  className="relative p-6 rounded-2xl bg-gradient-to-br from-card/50 to-accent/20 border border-border/30 hover-lift group"
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex gap-4 pt-8"
                 >
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br from-background to-accent flex items-center justify-center shadow-lg`}>
-                      <achievement.icon className={`w-6 h-6 ${achievement.color}`} />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-foreground">{achievement.title}</h4>
-                      <p className="text-sm text-muted-foreground">{achievement.description}</p>
-                    </div>
-                  </div>
-                  
-                  {/* Sparkle effect */}
-                  <motion.div
-                    className="absolute top-2 right-2"
-                    animate={{ 
-                      scale: [1, 1.2, 1],
-                      rotate: [0, 180, 360]
-                    }}
-                    transition={{ 
-                      duration: 3,
-                      repeat: Infinity,
-                      delay: index * 0.5
-                    }}
+                  <motion.button
+                    className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-xl shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-all duration-300"
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    <Star className="w-4 h-4 text-yellow-400 opacity-60" />
-                  </motion.div>
+                    <Save className="w-5 h-5" />
+                    Save Changes
+                  </motion.button>
+  
+                  <motion.button
+                    onClick={() => setIsEditing(false)}
+                    className="flex items-center gap-2 px-8 py-4 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-300"
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <X className="w-5 h-5" />
+                    Cancel
+                  </motion.button>
                 </motion.div>
-              ))}
+              )}
             </div>
-          </div>
-        </motion.div>
-      </div>
-    </motion.div>
-  );
-};
+          </motion.div>
+        </div>
+      </motion.div>
+    );
+  };
+  export default ProfileTab;

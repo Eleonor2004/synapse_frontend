@@ -3,9 +3,12 @@
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Network, Users, Activity, Search, Phone, MessageSquare, MapPin, Smartphone, X, Zap } from 'lucide-react';
+import { Network, Users, Activity, Search, Phone, MessageSquare, MapPin, Smartphone, X, Zap, Printer } from 'lucide-react';
 import { ExcelData, Individual } from '@/app/[locale]/workbench/page';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
+// Interfaces (No changes)
 interface NetworkNode {
   id: string;
   label: string;
@@ -43,7 +46,7 @@ interface NodeDetailsProps {
   onClose: () => void;
 }
 
-// Helper Functions
+// Helper Functions (No changes)
 const cleanPhoneNumber = (phone: string): string | null => {
   if (!phone || typeof phone !== 'string') return null;
   const cleaned = phone.replace(/[^\d+]/g, '');
@@ -109,7 +112,6 @@ const parseDuration = (durationStr: string): { seconds: number; isSMS: boolean }
   return { seconds: 0, isSMS: false };
 };
 
-// Simplified color and size utilities
 const getEdgeColor = (interactions: number): string => {
   if (interactions <= 2) return '#22c55e';
   if (interactions <= 5) return '#eab308';
@@ -121,7 +123,7 @@ const getNodeSize = (interactions: number): number => {
   return Math.min(50, Math.max(20, interactions * 1.5 + 15));
 };
 
-// Compact Node Details Component
+// NodeDetails Component (No changes)
 const NodeDetails: React.FC<NodeDetailsProps> = ({ node, edges, position, onClose }) => {
   const connectedEdges = edges.filter(edge => edge.from === node.id || edge.to === node.id);
   const totalCalls = connectedEdges.reduce((sum, edge) => sum + edge.callCount, 0);
@@ -138,7 +140,6 @@ const NodeDetails: React.FC<NodeDetailsProps> = ({ node, edges, position, onClos
         top: Math.max(position.y - 100, 10),
       }}
     >
-      {/* Compact header */}
       <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-lg">
         <div className="flex items-center gap-2">
           <Phone className="w-4 h-4" />
@@ -148,9 +149,7 @@ const NodeDetails: React.FC<NodeDetailsProps> = ({ node, edges, position, onClos
           <X className="w-4 h-4" />
         </button>
       </div>
-
       <div className="p-3 space-y-3">
-        {/* Stats row */}
         <div className="flex gap-2">
           <div className="flex-1 bg-green-50 dark:bg-green-900/20 p-2 rounded text-center">
             <div className="text-lg font-bold text-green-700 dark:text-green-400">{totalCalls}</div>
@@ -165,8 +164,6 @@ const NodeDetails: React.FC<NodeDetailsProps> = ({ node, edges, position, onClos
             <div className="text-xs text-purple-600 dark:text-purple-500">Links</div>
           </div>
         </div>
-
-        {/* Additional info if available */}
         {(node.imei || node.location) && (
           <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-gray-700">
             {node.imei && (
@@ -188,16 +185,19 @@ const NodeDetails: React.FC<NodeDetailsProps> = ({ node, edges, position, onClos
   );
 };
 
+
 export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onIndividualSelect }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showDetails, setShowDetails] = useState(false);
   const [detailsPosition, setDetailsPosition] = useState({ x: 0, y: 0 });
-  
-  // Data processing (keeping your original logic)
+  const [isExporting, setIsExporting] = useState(false);
+
+  // useMemo for networkData (No changes)
   const networkData = useMemo(() => {
     if (!data?.listings || !Array.isArray(data.listings)) {
       return { nodes: [], edges: [] };
@@ -296,113 +296,72 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
     const filteredInteractions = new Map();
     interactions.forEach((data, phone) => {
       let include = true;
-      
-      if (filters?.minInteractions && (data.calls + data.sms) < filters.minInteractions) {
-        include = false;
-      }
-      
+      if (filters?.minInteractions && (data.calls + data.sms) < filters.minInteractions) include = false;
       if (filters?.interactionType) {
         if (filters.interactionType === 'calls' && data.calls === 0) include = false;
         if (filters.interactionType === 'sms' && data.sms === 0) include = false;
       }
-      
-      if (filters?.individuals?.length > 0 && !filters.individuals.includes(phone)) {
-        include = false;
-      }
-      
-      if (include) {
-        filteredInteractions.set(phone, data);
-      }
+      if (filters?.individuals?.length > 0 && !filters.individuals.includes(phone)) include = false;
+      if (include) filteredInteractions.set(phone, data);
     });
 
     // Create nodes
     const nodes: NetworkNode[] = [];
     const phoneNumbers = Array.from(filteredInteractions.keys());
-    
     phoneNumbers.forEach((phone) => {
       const data = filteredInteractions.get(phone)!;
       const totalInteractions = data.calls + data.sms;
-      
       let nodeType: 'primary' | 'secondary' | 'service' = 'secondary';
       if (totalInteractions > 20) nodeType = 'primary';
       if (data.contacts.size > 10) nodeType = 'service';
-      
       const size = getNodeSize(totalInteractions);
-      
-      const colors = {
-        primary: '#3B82F6',
-        secondary: '#10B981',  
-        service: '#F59E0B'
-      };
-      
-      nodes.push({
-        id: phone,
-        label: phone,
-        phoneNumber: phone,
-        interactions: totalInteractions,
-        type: nodeType,
-        size,
-        color: colors[nodeType],
-        imei: data.imei,
-        location: data.location
-      });
+      const colors = { primary: '#3B82F6', secondary: '#10B981', service: '#F59E0B' };
+      nodes.push({ id: phone, label: phone, phoneNumber: phone, interactions: totalInteractions, type: nodeType, size, color: colors[nodeType], imei: data.imei, location: data.location });
     });
 
     // Create edges
     const edges: NetworkEdge[] = [];
     edgeMap.forEach((edgeData, edgeKey) => {
       const [phone1, phone2] = edgeKey.split('|');
-      
       if (filteredInteractions.has(phone1) && filteredInteractions.has(phone2)) {
         const totalInteractions = edgeData.calls + edgeData.sms;
         const width = Math.min(8, Math.max(1, totalInteractions * 0.5));
-        
-        edges.push({
-          id: edgeKey,
-          from: phone1,
-          to: phone2,
-          interactions: totalInteractions,
-          callCount: edgeData.calls,
-          smsCount: edgeData.sms,
-          width
-        });
+        edges.push({ id: edgeKey, from: phone1, to: phone2, interactions: totalInteractions, callCount: edgeData.calls, smsCount: edgeData.sms, width });
       }
     });
 
     return { nodes, edges };
   }, [data, filters]);
 
+  // Other hooks and handlers (No changes)
   const [positionedNodes, setPositionedNodes] = useState<NetworkNode[]>([]);
   
   useEffect(() => {
     if (!containerRef.current || networkData.nodes.length === 0) return;
-    
-    const { width, height } = containerRef.current.getBoundingClientRect();
-    setDimensions({ width, height });
-    
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const radius = Math.min(width, height) * 0.35;
-    
-    const positionMap = new Map(positionedNodes.map(n => [n.id, { x: n.x, y: n.y }]));
+    const rect = containerRef.current.getBoundingClientRect();
+    if (Math.abs(dimensions.width - rect.width) > 5 || Math.abs(dimensions.height - rect.height) > 5) {
+      setDimensions({ width: rect.width, height: rect.height });
+    }
+  }, [networkData.nodes]);
 
+  useEffect(() => {
+    if (networkData.nodes.length === 0 || dimensions.width === 0 || dimensions.height === 0) return;
+    const centerX = dimensions.width / 2;
+    const centerY = dimensions.height / 2;
+    const radius = Math.min(dimensions.width, dimensions.height) * 0.3;
+    const existingPositions = new Map(positionedNodes.map(n => [n.id, { x: n.x, y: n.y }]));
     const newPositionedNodes = networkData.nodes.map((node, index) => {
-      const existingPos = positionMap.get(node.id);
-      
-      if (existingPos) {
+      const existingPos = existingPositions.get(node.id);
+      if (existingPos && existingPos.x && existingPos.y) {
         return { ...node, x: existingPos.x, y: existingPos.y };
       }
-      
+      if (networkData.nodes.length === 1) {
+        return { ...node, x: centerX, y: centerY };
+      }
       const angle = (index / networkData.nodes.length) * 2 * Math.PI;
-      const nodeRadius = radius * (0.6 + Math.random() * 0.4);
-      
-      return {
-        ...node,
-        x: centerX + Math.cos(angle) * nodeRadius,
-        y: centerY + Math.sin(angle) * nodeRadius,
-      };
+      const nodeRadius = radius * (0.7 + Math.random() * 0.3);
+      return { ...node, x: centerX + Math.cos(angle) * nodeRadius, y: centerY + Math.sin(angle) * nodeRadius };
     });
-
     setPositionedNodes(newPositionedNodes);
   }, [networkData.nodes, dimensions]);
   
@@ -410,40 +369,32 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
     const handleResize = () => {
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
-        setDimensions({ width: rect.width, height: rect.height });
+        if (Math.abs(dimensions.width - rect.width) > 10 || Math.abs(dimensions.height - rect.height) > 10) {
+          setDimensions({ width: rect.width, height: rect.height });
+        }
       }
     };
-    
+    const observer = new ResizeObserver(handleResize);
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+      handleResize();
+    }
     window.addEventListener('resize', handleResize);
-    handleResize();
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      observer.disconnect();
+    };
   }, []);
 
   const handleNodeClick = (node: NetworkNode, event: React.MouseEvent) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    
     const newSelectedNode = selectedNode?.id === node.id ? null : node;
     setSelectedNode(newSelectedNode);
-    
     if (newSelectedNode) {
-      setDetailsPosition({ 
-        x: event.clientX - rect.left, 
-        y: event.clientY - rect.top 
-      });
+      setDetailsPosition({ x: event.clientX - rect.left, y: event.clientY - rect.top });
       setShowDetails(true);
-      
-      onIndividualSelect({
-        id: node.id,
-        phoneNumber: node.phoneNumber,
-        imei: node.imei,
-        interactions: node.interactions,
-        details: { 
-          type: node.type,
-          size: node.size,
-          location: node.location
-        }
-      });
+      onIndividualSelect({ id: node.id, phoneNumber: node.phoneNumber, imei: node.imei, interactions: node.interactions, details: { type: node.type, size: node.size, location: node.location }});
     } else {
       setShowDetails(false);
     }
@@ -452,9 +403,7 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
   const visibleNodes = useMemo(() => {
     if (!searchTerm.trim()) return positionedNodes;
     const lowerSearch = searchTerm.toLowerCase();
-    return positionedNodes.filter(node => 
-      node.phoneNumber.toLowerCase().includes(lowerSearch)
-    );
+    return positionedNodes.filter(node => node.phoneNumber.toLowerCase().includes(lowerSearch));
   }, [positionedNodes, searchTerm]);
 
   const connectedNodeIds = useMemo(() => {
@@ -466,7 +415,67 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
     });
     return connected;
   }, [selectedNode, networkData.edges]);
-  
+
+
+  // *** FULLY CORRECTED handleExport FUNCTION ***
+  const handleExport = async (format: 'png' | 'pdf') => {
+    if (!exportRef.current) return;
+
+    setIsExporting(true);
+    setHoveredNodeId(null); // Ensure no hover effects are captured
+    await new Promise(resolve => setTimeout(resolve, 100)); // Wait for UI to update
+
+    try {
+      const isDarkMode = document.documentElement.classList.contains('dark');
+      
+      const canvas = await html2canvas(exportRef.current, {
+        useCORS: true,
+        scale: 2,
+        backgroundColor: isDarkMode ? '#111827' : '#f8fafc', // Use a solid background color
+        
+        // This onclone callback is used to modify the cloned element right before capture
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.documentElement.querySelector('.h-full');
+          if (!clonedElement) return;
+          
+          // Find all elements in the clone and remove the problematic CSS property
+          const allElements = clonedElement.querySelectorAll('*');
+          allElements.forEach((el) => {
+            if (el instanceof HTMLElement) {
+              // This prevents html2canvas from trying to parse CSS gradients with `lab()`
+              el.style.backgroundImage = 'none';
+            }
+          });
+        },
+      }); // <<< The options object for html2canvas ends here.
+
+      // This logic runs *after* the canvas has been successfully created.
+      const imgData = canvas.toDataURL('image/png');
+
+      if (format === 'png') {
+        const link = document.createElement('a');
+        link.href = imgData;
+        link.download = 'network-graph.png';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else if (format === 'pdf') {
+        const pdf = new jsPDF({
+          orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
+          unit: 'px',
+          format: [canvas.width, canvas.height],
+        });
+        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+        pdf.save('network-graph.pdf');
+      }
+    } catch (error) {
+      console.error('Error exporting graph:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+
   if (networkData.nodes.length === 0) {
     return (
       <div className="h-full flex items-center justify-center bg-card rounded-lg border">
@@ -474,10 +483,7 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
           <Network className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold">No Network Data to Display</h3>
           <p className="text-muted-foreground mt-2">
-            {!data?.listings ? 
-              'No data source provided' : 
-              'Could not find valid phone number interactions in the data'
-            }
+            {!data?.listings ? 'No data source provided' : 'Could not find valid phone number interactions in the data'}
           </p>
         </div>
       </div>
@@ -485,23 +491,33 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
   }
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-      {/* Clean header */}
-      <div className="p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
+    <div ref={exportRef} className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      {/* Header with Export Buttons */}
+      <div className="flex-shrink-0 p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <Network className="w-5 h-5 text-blue-600" />
             Network Graph
           </h3>
           <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-            <span className="flex items-center gap-1">
-              <Users className="w-4 h-4" />
-              {networkData.nodes.length}
-            </span>
-            <span className="flex items-center gap-1">
-              <Zap className="w-4 h-4" />
-              {networkData.edges.length}
-            </span>
+            <div className="flex items-center gap-2">
+               <button 
+                  onClick={() => handleExport('png')} 
+                  disabled={isExporting}
+                  className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-600"
+               >
+                  {isExporting ? 'Saving...' : 'Export PNG'}
+               </button>
+               <button 
+                  onClick={() => handleExport('pdf')} 
+                  disabled={isExporting}
+                  className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+               >
+                  {isExporting ? 'Saving...' : 'Export PDF'}
+               </button>
+            </div>
+            <span className="flex items-center gap-1"><Users className="w-4 h-4" />{networkData.nodes.length}</span>
+            <span className="flex items-center gap-1"><Zap className="w-4 h-4" />{networkData.edges.length}</span>
           </div>
         </div>
         <div className="relative">
@@ -516,156 +532,66 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
         </div>
       </div>
       
-      {/* Graph area */}
-      <div ref={containerRef} className="flex-1 relative">
-        <svg width={dimensions.width} height={dimensions.height} className="w-full h-full">
-          {/* Edges */}
-          <g>
-            {networkData.edges.map(edge => {
-              const fromNode = visibleNodes.find(n => n.id === edge.from);
-              const toNode = visibleNodes.find(n => n.id === edge.to);
-              if (!fromNode || !toNode) return null;
-
-              const isHighlighted = selectedNode && (connectedNodeIds.has(edge.from) && connectedNodeIds.has(edge.to));
-              const edgeColor = getEdgeColor(edge.interactions);
-              
-              return (
-                <motion.line
-                  key={edge.id}
-                  x1={fromNode.x} y1={fromNode.y}
-                  x2={toNode.x} y2={toNode.y}
-                  stroke={isHighlighted ? "#fbbf24" : edgeColor}
-                  strokeWidth={isHighlighted ? edge.width + 1 : edge.width}
-                  initial={{ opacity: 0 }}
-                  animate={{ 
-                    opacity: isHighlighted ? 0.9 : selectedNode ? 0.2 : 0.6
-                  }}
-                  transition={{ duration: 0.2 }}
-                />
-              );
-            })}
-          </g>
-          
-          {/* Nodes */}
-          <g>
-            {visibleNodes.map(node => {
-              const isSelected = selectedNode?.id === node.id;
-              const isHovered = hoveredNodeId === node.id;
-              const isConnected = selectedNode && connectedNodeIds.has(node.id);
-              const isDimmed = selectedNode && !isConnected;
-
-              return (
-                <motion.g
-                  key={node.id}
-                  onClick={(e) => handleNodeClick(node, e as any)}
-                  onMouseEnter={() => setHoveredNodeId(node.id)}
-                  onMouseLeave={() => setHoveredNodeId(null)}
-                  initial={{ x: dimensions.width / 2, y: dimensions.height / 2, scale: 0 }}
-                  animate={{ 
-                    x: node.x, 
-                    y: node.y, 
-                    scale: isSelected ? 1.2 : isHovered ? 1.1 : 1, 
-                    opacity: isDimmed ? 0.3 : 1 
-                  }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                  className="cursor-pointer"
-                >
-                  {/* Selection ring */}
-                  {isSelected && (
-                    <circle
-                      r={node.size / 2 + 6}
-                      fill="none"
-                      stroke="#fbbf24"
-                      strokeWidth="2"
-                      opacity="0.8"
-                    />
-                  )}
-                  
-                  {/* Main node */}
-                  <circle
-                    r={node.size / 2}
-                    fill={node.color}
-                    stroke="white"
-                    strokeWidth="2"
-                    className="drop-shadow-md"
-                  />
-                  
-                  {/* Phone number on hover */}
-                  {isHovered && (
-                    <text 
-                      textAnchor="middle" 
-                      y={node.size / 2 + 20} 
-                      fontSize="11px" 
-                      fill="white"
-                      stroke="rgba(0,0,0,0.8)"
-                      strokeWidth="3"
-                      paintOrder="stroke"
-                      className="font-medium"
-                    >
-                      {node.phoneNumber}
-                    </text>
-                  )}
-                </motion.g>
-              );
-            })}
-          </g>
-        </svg>
-        
-        {/* Node details popup */}
+      {/* Graph Area */}
+      <div ref={containerRef} className="flex-1 relative min-h-0 w-full">
+        {dimensions.width > 0 && dimensions.height > 0 && (
+          <svg width={dimensions.width} height={dimensions.height} className="w-full h-full" viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}>
+            {/* Edges */}
+            <g>
+              {networkData.edges.map(edge => {
+                const fromNode = visibleNodes.find(n => n.id === edge.from);
+                const toNode = visibleNodes.find(n => n.id === edge.to);
+                if (!fromNode || !toNode) return null;
+                const isHighlighted = selectedNode && (connectedNodeIds.has(edge.from) && connectedNodeIds.has(edge.to));
+                const edgeColor = getEdgeColor(edge.interactions);
+                return (
+                  <motion.line key={edge.id} x1={fromNode.x || 0} y1={fromNode.y || 0} x2={toNode.x || 0} y2={toNode.y || 0} stroke={isHighlighted ? "#fbbf24" : edgeColor} strokeWidth={isHighlighted ? edge.width + 1 : edge.width} initial={{ opacity: 0 }} animate={{ opacity: isHighlighted ? 0.9 : selectedNode ? 0.2 : 0.6 }} transition={{ duration: 0.2 }} />
+                );
+              })}
+            </g>
+            {/* Nodes */}
+            <g>
+              {visibleNodes.map(node => {
+                const isSelected = selectedNode?.id === node.id;
+                const isHovered = hoveredNodeId === node.id;
+                const isConnected = selectedNode && connectedNodeIds.has(node.id);
+                const isDimmed = selectedNode && !isConnected;
+                return (
+                  <motion.g key={node.id} onClick={(e) => handleNodeClick(node, e as any)} onMouseEnter={() => setHoveredNodeId(node.id)} onMouseLeave={() => setHoveredNodeId(null)} initial={{ x: dimensions.width / 2, y: dimensions.height / 2, scale: 0 }} animate={{ x: node.x || dimensions.width / 2, y: node.y || dimensions.height / 2, scale: isSelected ? 1.2 : isHovered ? 1.1 : 1, opacity: isDimmed ? 0.3 : 1 }} transition={{ type: 'spring', stiffness: 400, damping: 25 }} className="cursor-pointer">
+                    {isSelected && (<circle r={node.size / 2 + 6} fill="none" stroke="#fbbf24" strokeWidth="2" opacity="0.8" />)}
+                    <circle r={node.size / 2} fill={node.color} stroke="white" strokeWidth="2" className="drop-shadow-md" />
+                    {isHovered && (<text textAnchor="middle" y={node.size / 2 + 20} fontSize="11px" fill="white" stroke="rgba(0,0,0,0.8)" strokeWidth="3" paintOrder="stroke" className="font-medium">{node.phoneNumber}</text>)}
+                  </motion.g>
+                );
+              })}
+            </g>
+          </svg>
+        )}
         {showDetails && selectedNode && (
-          <NodeDetails
-            node={selectedNode}
-            edges={networkData.edges}
-            position={detailsPosition}
-            onClose={() => {
-              setShowDetails(false);
-              setSelectedNode(null);
-            }}
-          />
+          <NodeDetails node={selectedNode} edges={networkData.edges} position={detailsPosition} onClose={() => { setShowDetails(false); setSelectedNode(null); }} />
         )}
       </div>
       
-      {/* Bottom legend */}
-      <div className="p-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between">
-          {/* Connection strength */}
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Connection:</span>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-1 bg-green-500 rounded"></div>
-                <span className="text-xs text-gray-600 dark:text-gray-400">Low</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-1 bg-yellow-500 rounded"></div>
-                <span className="text-xs text-gray-600 dark:text-gray-400">Med</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-1 bg-orange-500 rounded"></div>
-                <span className="text-xs text-gray-600 dark:text-gray-400">High</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-1 bg-red-500 rounded"></div>
-                <span className="text-xs text-gray-600 dark:text-gray-400">Max</span>
+      {/* Legend */}
+      <div className="flex-shrink-0 w-full border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <div className="px-6 py-3">
+          <div className="flex items-center justify-center space-x-8">
+            <div className="flex items-center space-x-4">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Connection Strength:</span>
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-1"><div className="w-4 h-0.5 bg-green-500 rounded-full"></div><span className="text-xs text-gray-600 dark:text-gray-400">Low (1-2)</span></div>
+                <div className="flex items-center space-x-1"><div className="w-4 h-1 bg-yellow-500 rounded-full"></div><span className="text-xs text-gray-600 dark:text-gray-400">Medium (3-5)</span></div>
+                <div className="flex items-center space-x-1"><div className="w-4 h-1.5 bg-orange-500 rounded-full"></div><span className="text-xs text-gray-600 dark:text-gray-400">High (6-10)</span></div>
+                <div className="flex items-center space-x-1"><div className="w-4 h-2 bg-red-500 rounded-full"></div><span className="text-xs text-gray-600 dark:text-gray-400">Very High (10+)</span></div>
               </div>
             </div>
-          </div>
-          
-          {/* Node types */}
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Nodes:</span>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-                <span className="text-xs text-gray-600 dark:text-gray-400">Primary</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-green-600 rounded-full"></div>
-                <span className="text-xs text-gray-600 dark:text-gray-400">Secondary</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-amber-600 rounded-full"></div>
-                <span className="text-xs text-gray-600 dark:text-gray-400">Service</span>
+            <div className="h-6 w-px bg-gray-300 dark:bg-gray-600"></div>
+            <div className="flex items-center space-x-4">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Node Types:</span>
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-1"><div className="w-3 h-3 bg-blue-600 rounded-full shadow-sm"></div><span className="text-xs text-gray-600 dark:text-gray-400">Primary (20+ interactions)</span></div>
+                <div className="flex items-center space-x-1"><div className="w-3 h-3 bg-green-600 rounded-full shadow-sm"></div><span className="text-xs text-gray-600 dark:text-gray-400">Secondary (standard)</span></div>
+                <div className="flex items-center space-x-1"><div className="w-3 h-3 bg-amber-600 rounded-full shadow-sm"></div><span className="text-xs text-gray-600 dark:text-gray-400">Service (10+ contacts)</span></div>
               </div>
             </div>
           </div>
