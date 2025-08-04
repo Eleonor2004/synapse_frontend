@@ -1,49 +1,19 @@
 'use client';
 
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+// FIX: Import the 'Variants' type from framer-motion
+import { motion, Variants } from 'framer-motion';
+
+// FIX: Removed all unused icon imports to clean up the code
 import { 
-  User, 
-  Settings, 
-  Clock, 
-  BarChart3, 
-  Bell, 
-  Users, 
-  Menu, 
-  X,
-  ChevronRight,
-  Home,
-  Sparkles,
-  Calendar,
-  Shield,
-  Award,
-  TrendingUp,
-  Activity,
   FileText,
-  Camera,
-  Mail,
-  Phone,
-  MapPin,
-  Edit3,
-  Save,
   Upload,
-  Download,
-  Eye,
-  EyeOff,
-  Search,
-  Filter,
-  Plus,
-  MoreVertical,
-  Check,
+  User, 
+  Shield,
   AlertTriangle,
-  Info,
-  Sun,
-  Moon,
-  Laptop,
-  Globe
 } from 'lucide-react';
 
-const cardVariants = {
+// FIX: Explicitly type the constant with the 'Variants' type
+const cardVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
       opacity: 1, 
@@ -62,17 +32,22 @@ const cardVariants = {
       }
     }
   };
+
+// Define a specific type for the activity type string
+type ActivityType = 'success' | 'warning' | 'info';
+
 // History Tab Component
 const HistoryTab = () => {
     const activities = [
-      { icon: FileText, text: 'Data analysis completed for Q4 report', time: '2 hours ago', type: 'success' },
-      { icon: Upload, text: 'Uploaded new dataset: customer_data.csv', time: '5 hours ago', type: 'info' },
-      { icon: User, text: 'Profile updated successfully', time: '1 day ago', type: 'info' },
-      { icon: Shield, text: 'Security scan completed', time: '2 days ago', type: 'success' },
-      { icon: AlertTriangle, text: 'Data processing warning resolved', time: '3 days ago', type: 'warning' },
+      { icon: FileText, text: 'Data analysis completed for Q4 report', time: '2 hours ago', type: 'success' as ActivityType },
+      { icon: Upload, text: 'Uploaded new dataset: customer_data.csv', time: '5 hours ago', type: 'info' as ActivityType },
+      { icon: User, text: 'Profile updated successfully', time: '1 day ago', type: 'info' as ActivityType },
+      { icon: Shield, text: 'Security scan completed', time: '2 days ago', type: 'success' as ActivityType },
+      { icon: AlertTriangle, text: 'Data processing warning resolved', time: '3 days ago', type: 'warning' as ActivityType },
     ];
   
-    const getTypeStyles = (type) => {
+    // Add a type for the 'type' parameter
+    const getTypeStyles = (type: ActivityType) => {
       switch (type) {
         case 'success':
           return 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-600';
@@ -133,4 +108,5 @@ const HistoryTab = () => {
       </motion.div>
     );
   };
-  export default HistoryTab
+
+export default HistoryTab;
