@@ -1,3 +1,5 @@
+// src/app/[locale]/dashboard/page.tsx
+
 'use client';
 
 import { useState } from 'react';
@@ -23,66 +25,22 @@ import NotificationsTab from '../../../components/dashboard/NotificationsTab';
 import SettingsTab from '../../../components/dashboard/SettingsTab';
 import UserManagementTab from '../../../components/dashboard/UserManagementTab';
 
-// Animation variants for the sidebar width
 const sidebarVariants = {
-  expanded: {
-    width: "280px",
-    transition: {
-      duration: 0.4,
-      ease: [0.4, 0, 0.2, 1]
-    }
-  },
-  collapsed: {
-    width: "80px",
-    transition: {
-      duration: 0.4,
-      ease: [0.4, 0, 0.2, 1]
-    }
-  }
+  expanded: { width: "280px", transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] } },
+  collapsed: { width: "80px", transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] } }
 };
 
-// Animation for labels inside the sidebar
 const labelVariants = {
-  expanded: {
-    opacity: 1,
-    x: 0,
-    transition: {
-      duration: 0.3,
-      delay: 0.15
-    }
-  },
-  collapsed: {
-    opacity: 0,
-    x: -10,
-    transition: {
-      duration: 0.15
-    }
-  }
+  expanded: { opacity: 1, x: 0, transition: { duration: 0.3, delay: 0.15 } },
+  collapsed: { opacity: 0, x: -10, transition: { duration: 0.15 } }
 };
 
-// Animation for the main tab content
 const tabContentVariants = {
   initial: { opacity: 0, y: 30, scale: 0.95 },
-  animate: { 
-    opacity: 1, 
-    y: 0,
-    scale: 1,
-    transition: {
-      duration: 0.5,
-      ease: [0.4, 0, 0.2, 1]
-    }
-  },
-  exit: { 
-    opacity: 0, 
-    y: -30,
-    scale: 0.95,
-    transition: {
-      duration: 0.3
-    }
-  }
+  animate: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] } },
+  exit: { opacity: 0, y: -30, scale: 0.95, transition: { duration: 0.3 } }
 };
 
-// Main Dashboard Component
 export default function EnhancedDashboard() {
   const [isExpanded, setIsExpanded] = useState(true);
   const [activeTab, setActiveTab] = useState('profile');
@@ -101,17 +59,13 @@ export default function EnhancedDashboard() {
   const activeTabData = tabs.find(tab => tab.id === activeTab);
 
   return (
-    // This container is now a flex container that fills its parent.
     <div className="flex h-full w-full bg-gray-50 dark:bg-gray-950">
-      
-      {/* Sidebar - No longer 'fixed' or has a z-index. */}
       <motion.aside
         variants={sidebarVariants}
         animate={isExpanded ? "expanded" : "collapsed"}
         className="flex-shrink-0 h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 shadow-lg"
       >
         <div className="flex flex-col h-full">
-          {/* Sidebar Header */}
           <div className="flex items-center justify-between p-6 h-16 border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
             <AnimatePresence>
               {isExpanded && (
@@ -131,7 +85,6 @@ export default function EnhancedDashboard() {
                 </motion.div>
               )}
             </AnimatePresence>
-            
             <motion.button
               onClick={() => setIsExpanded(!isExpanded)}
               className="p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
@@ -142,7 +95,6 @@ export default function EnhancedDashboard() {
             </motion.button>
           </div>
 
-          {/* Navigation - This section will scroll if tabs overflow */}
           <nav className="flex-1 p-6 overflow-y-auto">
             <div className="space-y-2">
               {visibleTabs.map((tab, index) => {
@@ -161,14 +113,9 @@ export default function EnhancedDashboard() {
                     whileHover={{ x: 4, scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     initial={{ opacity: 0, x: -20 }}
-                    animate={{ 
-                      opacity: 1, 
-                      x: 0,
-                      transition: { delay: index * 0.1 }
-                    }}
+                    animate={{ opacity: 1, x: 0, transition: { delay: index * 0.1 } }}
                   >
                     <Icon className={`w-6 h-6 flex-shrink-0 ${isActive ? 'text-white' : ''}`} />
-                    
                     <AnimatePresence>
                       {isExpanded && (
                         <motion.div
@@ -187,7 +134,6 @@ export default function EnhancedDashboard() {
                         </motion.div>
                       )}
                     </AnimatePresence>
-
                     {!isExpanded && tab.notification && (
                       <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold" />
                     )}
@@ -197,7 +143,6 @@ export default function EnhancedDashboard() {
             </div>
           </nav>
 
-          {/* Sidebar Footer */}
           <div className="p-6 border-t border-gray-200 dark:border-gray-800 flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
@@ -221,11 +166,9 @@ export default function EnhancedDashboard() {
           </div>
         </div>
       </motion.aside>
-
-      {/* Main content - `flex-1` makes it take up remaining space. `overflow-y-auto` allows it to scroll. */}
+      
       <main className="flex-1 overflow-y-auto">
         <div className="p-8">
-          {/* Header */}
           <div className="mb-8">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
@@ -238,11 +181,11 @@ export default function EnhancedDashboard() {
               </div>
               <div>
                 <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">{activeTabData?.label}</h1>
+                {/* FIX: Replaced ' with ' */}
                 <p className="text-gray-600 dark:text-gray-400 text-lg">Welcome back! Here's what's happening today.</p>
               </div>
             </motion.div>
 
-            {/* Breadcrumb */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -257,7 +200,6 @@ export default function EnhancedDashboard() {
             </motion.div>
           </div>
 
-          {/* Tab content */}
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
