@@ -3,7 +3,8 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+// FIX: Import the 'Variants' type from framer-motion
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { 
   User, 
   Settings, 
@@ -25,17 +26,20 @@ import NotificationsTab from '../../../components/dashboard/NotificationsTab';
 import SettingsTab from '../../../components/dashboard/SettingsTab';
 import UserManagementTab from '../../../components/dashboard/UserManagementTab';
 
-const sidebarVariants = {
+// FIX: Explicitly type the constant with the 'Variants' type
+const sidebarVariants: Variants = {
   expanded: { width: "280px", transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] } },
   collapsed: { width: "80px", transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] } }
 };
 
-const labelVariants = {
+// FIX: Explicitly type the constant with the 'Variants' type
+const labelVariants: Variants = {
   expanded: { opacity: 1, x: 0, transition: { duration: 0.3, delay: 0.15 } },
   collapsed: { opacity: 0, x: -10, transition: { duration: 0.15 } }
 };
 
-const tabContentVariants = {
+// FIX: Explicitly type the constant with the 'Variants' type
+const tabContentVariants: Variants = {
   initial: { opacity: 0, y: 30, scale: 0.95 },
   animate: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] } },
   exit: { opacity: 0, y: -30, scale: 0.95, transition: { duration: 0.3 } }
@@ -181,8 +185,7 @@ export default function EnhancedDashboard() {
               </div>
               <div>
                 <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">{activeTabData?.label}</h1>
-                {/* FIX: Replaced ' with ' */}
-                <p className="text-gray-600 dark:text-gray-400 text-lg">Welcome back! </p>
+                <p className="text-gray-600 dark:text-gray-400 text-lg">Welcome back! Here's what's happening today.</p>
               </div>
             </motion.div>
 
