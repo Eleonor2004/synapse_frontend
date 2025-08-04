@@ -6,28 +6,16 @@ import React, { useState, useMemo } from 'react';
 import { MapPin, Navigation, Phone, MessageSquare, User, Layers } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import { MapView } from './MapView';
+import { ExcelData, Individual, IndividualDetails } from '@/app/[locale]/workbench/page';
 
-// --- INTERFACES ---
-// Use a more generic but safe type for dynamic data
 type DynamicRow = Record<string, unknown>;
 
-export interface ExcelData {
-  listings?: DynamicRow[];
-  [key: string]: DynamicRow[] | undefined;
-}
-
-// Define the shape of the 'details' object
-interface IndividualDetails {
-    locations: number;
-    lastSeen: number;
-}
-
-export interface Individual {
-  id: string;
-  phoneNumber: string;
-  imei?: string;
-  interactions: number;
-  details: IndividualDetails;
+// Define the shape of the filters object
+interface Filters {
+  interactionType: "all" | "calls" | "sms";
+  dateRange: { start: string; end: string };
+  individuals: string[];
+  minInteractions: number;
 }
 
 interface LocationPoint {
@@ -41,14 +29,11 @@ interface LocationPoint {
 
 interface LocationGraphProps {
   data: ExcelData | null;
-  // Use a more specific type if the filter shape is known
-  filters: Record<string, any>; 
+  filters: Filters; // Use the specific Filters type
   onIndividualSelect: (individual: Individual) => void;
 }
 
-// --- HELPER FUNCTIONS ---
-// Use Record<string, unknown> instead of 'any' for type safety
-const findFieldValue = (row: Record<string, unknown>, possibleFields: string[]): string | null => {
+const findFieldValue = (row: DynamicRow, possibleFields: string[]): string | null => {
   if (!row || typeof row !== 'object') return null;
   const normalize = (str: string) => str.toLowerCase().replace(/[àáâãäå]/g, 'a').replace(/[èéêë]/g, 'e').replace(/[ç]/g, 'c').replace(/[ùúûü]/g, 'u').replace(/[òóôõö]/g, 'o').replace(/[ìíîï]/g, 'i').replace(/[^a-z0-9\s_]/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -107,10 +92,10 @@ export const LocationGraph: React.FC<LocationGraphProps> = ({ data, filters, onI
     const processedLocations: LocationPoint[] = [];
     const pathsByIndividual = new Map<string, LocationPoint[]>();
     
-    const possibleCallerFields = ['caller_num', 'Numéro Appelant'];
-    const possibleLocationFields = ['location', 'Localisation numéro appelant'];
-    const possibleDateFields = ['timestamp', 'Date Début appel'];
-    const possibleDurationFields = ['duration_str', 'Durée appel'];
+    const possibleCallerFields = ['caller_num', 'Numéro Appelant', 'numero appelant', 'source'];
+    const possibleLocationFields = ['location', 'Localisation numéro appelant', 'localisation_numero_appelant'];
+    const possibleDateFields = ['timestamp', 'Date Début appel', 'date_debut_appel', 'date'];
+    const possibleDurationFields = ['duration_str', 'Durée appel', 'duree_appel'];
 
     interactionList.forEach((listing, index) => {
       if (typeof listing !== 'object' || listing === null) return;
@@ -131,10 +116,13 @@ export const LocationGraph: React.FC<LocationGraphProps> = ({ data, filters, onI
 
       const { isSMS } = parseDuration(durationStr);
       const interactionType = isSMS ? 'sms' : 'call';
+      
+      let date = new Date(dateStr);
+      if(isNaN(date.getTime())) return; // Skip if date is invalid
 
       const locationPoint: LocationPoint = {
         id: `${caller}_${dateStr}_${index}`, phoneNumber: caller, latitude, longitude,
-        timestamp: new Date(dateStr), interactionType: interactionType,
+        timestamp: date, interactionType: interactionType,
       };
 
       processedLocations.push(locationPoint);
@@ -145,12 +133,10 @@ export const LocationGraph: React.FC<LocationGraphProps> = ({ data, filters, onI
     });
 
     pathsByIndividual.forEach(path => path.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()));
-    // FIX: Only return what is used to prevent unused variable warnings.
     return { locationData: processedLocations, individualPaths: pathsByIndividual };
   }, [data]);
 
-  // FIX: Destructure 'individualPaths' to avoid the unused variable warning
-  const { locationData, individualPaths: allIndividualPaths } = processedData;
+  const { locationData, individualPaths } = processedData;
 
   const filteredData = useMemo(() => {
     const filteredLocs = locationData.filter(location => {
@@ -160,6 +146,7 @@ export const LocationGraph: React.FC<LocationGraphProps> = ({ data, filters, onI
       if (filters.individuals?.length > 0 && !filters.individuals.includes(location.phoneNumber)) return false;
       return true;
     });
+
     const filteredPaths = new Map<string, LocationPoint[]>();
     filteredLocs.forEach(loc => {
       if(!filteredPaths.has(loc.phoneNumber)) {

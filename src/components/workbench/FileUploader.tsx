@@ -1,13 +1,14 @@
 // src/components/workbench/FileUploader.tsx
+
 "use client";
 
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { Upload, File as FileIcon, X, CheckCircle, AlertCircle, FolderOpen, Archive, Info, AlertTriangle, ArrowRight, Edit3 } from "lucide-react";
+import { Upload, X, CheckCircle, AlertTriangle, ArrowRight, Edit3 } from "lucide-react";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
 import { motion, AnimatePresence } from "framer-motion";
-import { ExcelData } from "@/app/[locale]/workbench/page"; // Import from the page
+import { ExcelData } from "@/app/[locale]/workbench/page"; 
 
 interface FileUploaderProps {
   onUpload: (data: ExcelData, name: string) => void;
@@ -34,8 +35,6 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  
-  // NEW state for the improved upload flow
   const [parsedData, setParsedData] = useState<ExcelData | null>(null);
   const [analysisName, setAnalysisName] = useState("");
 
@@ -44,16 +43,13 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
     const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
     const normalizedRequired = normalize(requiredSheet);
     
-    // Exact and normalized match
     const exactMatch = sheetNames.find(name => normalize(name) === normalizedRequired);
     if (exactMatch) return exactMatch;
 
-    // Check alternatives
     const alternatives = SHEET_ALTERNATIVES[requiredSheet] || [];
     for (const alt of alternatives) {
-      if (sheetNames.find(name => normalize(name) === normalize(alt))) {
-        return sheetNames.find(name => normalize(name) === normalize(alt));
-      }
+      const foundAlt = sheetNames.find(name => normalize(name) === normalize(alt));
+      if (foundAlt) return foundAlt;
     }
     return null;
   };
@@ -90,7 +86,8 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
         const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[actualSheetName], {
           defval: null, raw: false, blankrows: false
         });
-        data[key as keyof ExcelData] = sheetData as any[];
+        // Use a safe type assertion
+        data[key as keyof ExcelData] = sheetData as Record<string, unknown>[];
     }
     
     return { data, validation };
@@ -127,8 +124,12 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
         onError(`File is missing required sheets: ${validation.missingSheets.join(', ')}`);
         resetState();
       }
-    } catch (e: any) {
-      onError(e.message || "An unknown error occurred during file processing.");
+    } catch (e: unknown) { // Type error as unknown
+      if (e instanceof Error) {
+          onError(e.message);
+      } else {
+          onError("An unknown error occurred during file processing.");
+      }
       resetState();
     } finally {
       setIsProcessing(false);
@@ -140,12 +141,11 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
     if (!file) return;
     setUploadedFile(file);
     processFile(file);
-  }, []);
+  }, [processFile]);
   
   const handleStartAnalysis = () => {
     if (parsedData && analysisName.trim()) {
         onUpload(parsedData, analysisName.trim());
-        // Do not reset here, the parent component will handle the view change
     }
   }
 

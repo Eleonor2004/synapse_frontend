@@ -1,8 +1,10 @@
 // src/app/[locale]/workbench/page.tsx
+
 "use client";
 
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { AxiosError } from "axios"; // Import AxiosError
 import { motion, AnimatePresence } from "framer-motion";
 import { FileUploader } from "../../../components/workbench/FileUploader";
 import { NetworkGraph } from "../../../components/workbench/NetworkGraph";
@@ -11,14 +13,26 @@ import { FilterPanel } from "../../../components/workbench/FilterPanel";
 import { IndividualInfo } from "../../../components/workbench/IndividualInfo";
 import { AuthGuard } from "../../../components/auth/AuthGuard";
 import { useNotifications, NotificationContainer } from "../../../components/ui/Notification";
-import { LayoutGrid, Map, List, Upload, Eye, Loader2, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen } from "lucide-react";
+import { LayoutGrid, Map, List, Eye, Loader2, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen } from "lucide-react";
 import { getMyListingSets, importListingsFile, getGraphDataForSets } from "../../../services/workbenchService";
-import { ListingSet } from "../../../types/api";
+import { GraphResponse, ListingSet } from "../../../types/api";
+
+// Define a type for a row of data with unknown columns
+type DynamicRow = Record<string, unknown>;
 
 export interface ExcelData {
-  listings?: any[];
-  subscribers?: any[];
-  [key: string]: any[] | undefined;
+  listings?: DynamicRow[];
+  subscribers?: DynamicRow[];
+  [key: string]: DynamicRow[] | undefined;
+}
+
+// Define the shape of the 'details' object
+export interface IndividualDetails {
+  type?: string;
+  size?: number;
+  location?: string | null;
+  locations?: number;
+  lastSeen?: number;
 }
 
 export interface Individual {
@@ -27,14 +41,13 @@ export interface Individual {
   imei?: string;
   location?: string;
   interactions: number;
-  details: any;
+  details: IndividualDetails;
 }
 
 export default function WorkbenchPage() {
   const { addNotification, notifications } = useNotifications();
   const queryClient = useQueryClient();
 
-  // --- STATE MANAGEMENT ---
   const [selectedListingSet, setSelectedListingSet] = useState<ListingSet | null>(null);
   const [selectedIndividual, setSelectedIndividual] = useState<Individual | null>(null);
   const [clientSideData, setClientSideData] = useState<ExcelData | null>(null);
@@ -48,16 +61,14 @@ export default function WorkbenchPage() {
     minInteractions: 0
   });
 
-  // --- DATA FETCHING ---
   const { data: listingSets, isLoading: isLoadingSets } = useQuery({
     queryKey: ['listingSets'],
     queryFn: getMyListingSets,
   });
-
-  // --- FIX #1: Keep useQuery simple. It's only responsible for fetching data into `remoteGraphData`. ---
+  
   const { data: remoteGraphData, isLoading: isLoadingGraph } = useQuery({
     queryKey: ['graphData', selectedListingSet?.id],
-    queryFn: () => getGraphDataForSets([selectedListingSet!.id]),
+    queryFn: (): Promise<GraphResponse> => getGraphDataForSets([selectedListingSet!.id]),
     enabled: !!selectedListingSet,
   });
 
@@ -67,12 +78,11 @@ export default function WorkbenchPage() {
       addNotification("success", "Analysis Saved", `Analysis "${data.listing_set.name}" has been saved to your account.`);
       queryClient.invalidateQueries({ queryKey: ['listingSets'] });
     },
-    onError: (error: any) => {
+    onError: (error: AxiosError<{ detail: string }>) => { // Correctly type the error
       addNotification("error", "Save Failed", error.response?.data?.detail || "Could not save the analysis to the server.");
     },
   });
 
-  // --- EVENT HANDLERS ---
   const handleFileUpload = (parsedData: ExcelData, analysisName: string) => {
     if (!analysisName || !parsedData.listings) return;
     
@@ -87,7 +97,7 @@ export default function WorkbenchPage() {
 
   const handleViewAnalysis = (listingSet: ListingSet) => {
     setSelectedListingSet(listingSet);
-    setClientSideData(null); // IMPORTANT: Clear client-side data to allow remote data to be used.
+    setClientSideData(null); 
     setSelectedIndividual(null);
     setActiveView('network');
   };
@@ -97,29 +107,19 @@ export default function WorkbenchPage() {
     setClientSideData(null);
     setSelectedIndividual(null);
   }
-
-  // --- DERIVED STATE ---
-  // --- FIX #2: This is the most critical change. It correctly combines the two data sources. ---
+  
   const activeData: ExcelData | null = useMemo(() => {
-    // Priority 1: Use client-side data if it exists (for new uploads).
     if (clientSideData) {
       return clientSideData;
     }
-    // Priority 2: Use remote data if it has been fetched.
-    if (remoteGraphData) {
-      // The API returns the listings array directly, so we wrap it in the expected object structure.
-      return { listings: remoteGraphData };
+    // Correctly process the nested GraphResponse structure
+    if (remoteGraphData && remoteGraphData.network) {
+      return { listings: remoteGraphData.network.nodes.map(n => ({...n.properties, id: n.id})) }; // Example transformation
     }
-    // Otherwise, there's no data.
     return null;
   }, [clientSideData, remoteGraphData]);
 
   const isAnalysisView = !!activeData;
-
-  // For debugging, you can add this line to see what data is being passed down.
-  console.log("Active Data for Graphs:", activeData);
-
-  // --- RENDER LOGIC (No changes below this line) ---
 
   const renderWelcomeView = () => (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] p-6">
@@ -173,7 +173,6 @@ export default function WorkbenchPage() {
   
   const renderAnalysisView = () => (
      <div className="flex h-[calc(100vh-100px)] p-4 gap-4">
-        {/* Filter Panel */}
         <AnimatePresence>
             {isFilterPanelOpen && (
                 <motion.div
@@ -185,7 +184,6 @@ export default function WorkbenchPage() {
             )}
         </AnimatePresence>
 
-        {/* Main Content */}
         <div className="flex-1 flex flex-col min-w-0">
             <div className="flex-shrink-0 bg-card border border-border rounded-lg p-2 mb-4">
                 <div className="flex items-center justify-between">
@@ -225,7 +223,6 @@ export default function WorkbenchPage() {
             </div>
         </div>
 
-        {/* Individual Info Panel */}
         <AnimatePresence>
             {isIndividualPanelOpen && (
                 <motion.div

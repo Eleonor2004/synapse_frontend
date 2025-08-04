@@ -182,7 +182,7 @@ export default function EnhancedDashboard() {
               <div>
                 <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">{activeTabData?.label}</h1>
                 {/* FIX: Replaced ' with ' */}
-                <p className="text-gray-600 dark:text-gray-400 text-lg">Welcome back! Here's what's happening today.</p>
+                <p className="text-gray-600 dark:text-gray-400 text-lg">Welcome back! </p>
               </div>
             </motion.div>
 

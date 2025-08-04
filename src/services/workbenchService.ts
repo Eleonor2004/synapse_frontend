@@ -1,13 +1,14 @@
+// src/services/workbenchService.ts
+
 import apiClient from "../lib/apiClient";
-import { ListingSet, GraphResponse, GraphData } from "../types/api";
+import { ListingSet, GraphResponse } from "../types/api";
 
 /**
  * Uploads a listing file to the backend to create a new ListingSet.
  * @param name - The name for the new analysis/ListingSet.
- * @param file - The file to be uploaded (must be CSV format).
+ * @param listings - An array of records from the uploaded file.
  */
-// Refactor the import function to send JSON
-export const importListingsFile = async ({ name, listings }: { name: string; listings: any[] }): Promise<{ message: string; listing_set: ListingSet }> => {
+export const importListingsFile = async ({ name, listings }: { name: string; listings: Record<string, unknown>[] }): Promise<{ message: string; listing_set: ListingSet }> => {
   const payload = { name, listings };
   const response = await apiClient.post('/workbench/listings/import', payload);
   return response.data;
@@ -26,6 +27,6 @@ export const getMyListingSets = async (): Promise<ListingSet[]> => {
  * @param listing_set_ids - An array of ListingSet IDs to visualize.
  */
 export const getGraphDataForSets = async (listing_set_ids: string[]): Promise<GraphResponse> => {
-  const response = await apiClient.post('/workbench/visualize', listing_set_ids);
+  const response = await apiClient.post('/workbench/visualize', { listing_set_ids }); // Pass as an object
   return response.data;
 };
