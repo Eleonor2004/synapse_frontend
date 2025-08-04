@@ -6,7 +6,7 @@ import React, { useState, useMemo } from 'react';
 import { MapPin, Navigation, Phone, MessageSquare, User, Layers } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import { MapView } from './MapView';
-import { ExcelData, Individual, IndividualDetails } from '@/app/[locale]/workbench/page';
+import { ExcelData, Individual } from '@/app/[locale]/workbench/page';
 
 type DynamicRow = Record<string, unknown>;
 
@@ -117,7 +117,8 @@ export const LocationGraph: React.FC<LocationGraphProps> = ({ data, filters, onI
       const { isSMS } = parseDuration(durationStr);
       const interactionType = isSMS ? 'sms' : 'call';
       
-      let date = new Date(dateStr);
+      // FIX: Changed 'let' to 'const' as 'date' is never reassigned.
+      const date = new Date(dateStr);
       if(isNaN(date.getTime())) return; // Skip if date is invalid
 
       const locationPoint: LocationPoint = {
@@ -233,7 +234,7 @@ export const LocationGraph: React.FC<LocationGraphProps> = ({ data, filters, onI
           </div>
         </div>
         <div className="flex-1 relative">
-          <MapView locations={filteredLocations} paths={filteredPaths} selectedIndividual={selectedIndividual} getColor={generateColor} />
+          <MapView locations={filteredLocations} paths={individualPaths} selectedIndividual={selectedIndividual} getColor={generateColor} />
         </div>
       </div>
     </div>
