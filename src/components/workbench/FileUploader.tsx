@@ -38,6 +38,13 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
   const [parsedData, setParsedData] = useState<ExcelData | null>(null);
   const [analysisName, setAnalysisName] = useState("");
 
+  const resetState = useCallback(() => {
+    setUploadedFile(null);
+    setValidationResult(null);
+    setParsedData(null);
+    setAnalysisName("");
+    setIsProcessing(false);
+  }, []);
 
   const findSheetMatch = (sheetNames: string[], requiredSheet: string): string | null => {
     const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -86,14 +93,14 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
         const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[actualSheetName], {
           defval: null, raw: false, blankrows: false
         });
-        // Use a safe type assertion
         data[key as keyof ExcelData] = sheetData as Record<string, unknown>[];
     }
     
     return { data, validation };
   };
 
-  const processFile = async (file: File) => {
+  // FIX: Wrap 'processFile' in its own useCallback hook
+  const processFile = useCallback(async (file: File) => {
     setIsProcessing(true);
     setValidationResult(null);
     setParsedData(null);
@@ -124,7 +131,7 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
         onError(`File is missing required sheets: ${validation.missingSheets.join(', ')}`);
         resetState();
       }
-    } catch (e: unknown) { // Type error as unknown
+    } catch (e: unknown) {
       if (e instanceof Error) {
           onError(e.message);
       } else {
@@ -134,7 +141,7 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [onError, resetState]); // Dependencies for processFile
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -149,14 +156,6 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
     }
   }
 
-  const resetState = () => {
-    setUploadedFile(null);
-    setValidationResult(null);
-    setParsedData(null);
-    setAnalysisName("");
-    setIsProcessing(false);
-  };
-  
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {

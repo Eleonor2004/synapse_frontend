@@ -1,4 +1,4 @@
-// src/app/[locale]/help/page.tsx
+
 "use client";
 
 import { useLocale } from "next-intl";
@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Card } from "../../../components/ui/Card";
 import { Input } from "../../../components/ui/Input";
 import { Badge } from "../../../components/ui/Badge";
-import { Tabs } from "../../../components/ui/Tabs";
+import { Tabs, TabItem } from "../../../components/ui/Tabs"; // Import TabItem type if available from the component
 import { 
   Search, 
   Book, 
@@ -26,303 +26,304 @@ import {
   Star
 } from "lucide-react";
 
+// NOTE: All translation and constant data remains the same as you provided...
 const translations = {
-  en: {
-    hero: {
-      title: "Help Center",
-      subtitle: "Find answers to your questions and learn how to get the most out of SYNAPSE.",
-      searchPlaceholder: "Search for help articles..."
+    en: {
+      hero: {
+        title: "Help Center",
+        subtitle: "Find answers to your questions and learn how to get the most out of SYNAPSE.",
+        searchPlaceholder: "Search for help articles..."
+      },
+      categories: {
+        title: "Browse by Category",
+        items: [
+          {
+            icon: "Book",
+            title: "Getting Started",
+            description: "Learn the basics and set up your first network analysis",
+            count: 12,
+            color: "blue"
+          },
+          {
+            icon: "BarChart",
+            title: "Analytics & Reports",
+            description: "Understanding your data and creating meaningful reports",
+            count: 18,
+            color: "green"
+          },
+          {
+            icon: "Settings",
+            title: "Account & Settings",
+            description: "Manage your account, billing, and preferences",
+            count: 8,
+            color: "purple"
+          },
+          {
+            icon: "Shield",
+            title: "Security & Privacy",
+            description: "Keep your data safe and understand our security measures",
+            count: 6,
+            color: "red"
+          },
+          {
+            icon: "Users",
+            title: "Team Management",
+            description: "Collaborate with your team and manage permissions",
+            count: 10,
+            color: "orange"
+          },
+          {
+            icon: "Globe",
+            title: "API & Integrations",
+            description: "Connect SYNAPSE with your existing tools and workflows",
+            count: 15,
+            color: "teal"
+          }
+        ]
+      },
+      popular: {
+        title: "Popular Articles",
+        items: [
+          {
+            title: "How to create your first network visualization",
+            category: "Getting Started",
+            readTime: "5 min read",
+            rating: 4.8
+          },
+          {
+            title: "Understanding network metrics and KPIs",
+            category: "Analytics & Reports",
+            readTime: "8 min read",
+            rating: 4.9
+          },
+          {
+            title: "Setting up team permissions and roles",
+            category: "Team Management",
+            readTime: "3 min read",
+            rating: 4.7
+          },
+          {
+            title: "Exporting data and reports",
+            category: "Analytics & Reports",
+            readTime: "4 min read",
+            rating: 4.6
+          },
+          {
+            title: "Connecting external data sources",
+            category: "API & Integrations",
+            readTime: "12 min read",
+            rating: 4.8
+          }
+        ]
+      },
+      resources: {
+        title: "Additional Resources",
+        items: [
+          {
+            icon: "Video",
+            title: "Video Tutorials",
+            description: "Step-by-step video guides for all features",
+            link: "Watch Videos"
+          },
+          {
+            icon: "Download",
+            title: "Documentation",
+            description: "Complete technical documentation and API reference",
+            link: "View Docs"
+          },
+          {
+            icon: "MessageCircle",
+            title: "Community Forum",
+            description: "Connect with other users and share best practices",
+            link: "Join Forum"
+          }
+        ]
+      },
+      contact: {
+        title: "Still Need Help?",
+        subtitle: "Our support team is here to assist you 24/7",
+        options: [
+          {
+            title: "Live Chat",
+            description: "Get instant help from our support team",
+            available: "Available now",
+            action: "Start Chat"
+          },
+          {
+            title: "Email Support",
+            description: "Send us a detailed message and we'll respond within 4 hours",
+            available: "Response in 4h",
+            action: "Send Email"
+          },
+          {
+            title: "Phone Support",
+            description: "Call us directly for urgent issues",
+            available: "Mon-Fri 9AM-6PM EST",
+            action: "Call Now"
+          }
+        ]
+      }
     },
-    categories: {
-      title: "Browse by Category",
-      items: [
-        {
-          icon: "Book",
-          title: "Getting Started",
-          description: "Learn the basics and set up your first network analysis",
-          count: 12,
-          color: "blue"
-        },
-        {
-          icon: "BarChart",
-          title: "Analytics & Reports",
-          description: "Understanding your data and creating meaningful reports",
-          count: 18,
-          color: "green"
-        },
-        {
-          icon: "Settings",
-          title: "Account & Settings",
-          description: "Manage your account, billing, and preferences",
-          count: 8,
-          color: "purple"
-        },
-        {
-          icon: "Shield",
-          title: "Security & Privacy",
-          description: "Keep your data safe and understand our security measures",
-          count: 6,
-          color: "red"
-        },
-        {
-          icon: "Users",
-          title: "Team Management",
-          description: "Collaborate with your team and manage permissions",
-          count: 10,
-          color: "orange"
-        },
-        {
-          icon: "Globe",
-          title: "API & Integrations",
-          description: "Connect SYNAPSE with your existing tools and workflows",
-          count: 15,
-          color: "teal"
-        }
-      ]
-    },
-    popular: {
-      title: "Popular Articles",
-      items: [
-        {
-          title: "How to create your first network visualization",
-          category: "Getting Started",
-          readTime: "5 min read",
-          rating: 4.8
-        },
-        {
-          title: "Understanding network metrics and KPIs",
-          category: "Analytics & Reports",
-          readTime: "8 min read",
-          rating: 4.9
-        },
-        {
-          title: "Setting up team permissions and roles",
-          category: "Team Management",
-          readTime: "3 min read",
-          rating: 4.7
-        },
-        {
-          title: "Exporting data and reports",
-          category: "Analytics & Reports",
-          readTime: "4 min read",
-          rating: 4.6
-        },
-        {
-          title: "Connecting external data sources",
-          category: "API & Integrations",
-          readTime: "12 min read",
-          rating: 4.8
-        }
-      ]
-    },
-    resources: {
-      title: "Additional Resources",
-      items: [
-        {
-          icon: "Video",
-          title: "Video Tutorials",
-          description: "Step-by-step video guides for all features",
-          link: "Watch Videos"
-        },
-        {
-          icon: "Download",
-          title: "Documentation",
-          description: "Complete technical documentation and API reference",
-          link: "View Docs"
-        },
-        {
-          icon: "MessageCircle",
-          title: "Community Forum",
-          description: "Connect with other users and share best practices",
-          link: "Join Forum"
-        }
-      ]
-    },
-    contact: {
-      title: "Still Need Help?",
-      subtitle: "Our support team is here to assist you 24/7",
-      options: [
-        {
-          title: "Live Chat",
-          description: "Get instant help from our support team",
-          available: "Available now",
-          action: "Start Chat"
-        },
-        {
-          title: "Email Support",
-          description: "Send us a detailed message and we'll respond within 4 hours",
-          available: "Response in 4h",
-          action: "Send Email"
-        },
-        {
-          title: "Phone Support",
-          description: "Call us directly for urgent issues",
-          available: "Mon-Fri 9AM-6PM EST",
-          action: "Call Now"
-        }
-      ]
+    fr: {
+      hero: {
+        title: "Centre d'Aide",
+        subtitle: "Trouvez des réponses à vos questions et apprenez à tirer le meilleur parti de SYNAPSE.",
+        searchPlaceholder: "Rechercher des articles d'aide..."
+      },
+      categories: {
+        title: "Parcourir par Catégorie",
+        items: [
+          {
+            icon: "Book",
+            title: "Premiers Pas",
+            description: "Apprenez les bases et configurez votre première analyse de réseau",
+            count: 12,
+            color: "blue"
+          },
+          {
+            icon: "BarChart",
+            title: "Analyses & Rapports",
+            description: "Comprendre vos données et créer des rapports significatifs",
+            count: 18,
+            color: "green"
+          },
+          {
+            icon: "Settings",
+            title: "Compte & Paramètres",
+            description: "Gérez votre compte, facturation et préférences",
+            count: 8,
+            color: "purple"
+          },
+          {
+            icon: "Shield",
+            title: "Sécurité & Confidentialité",
+            description: "Gardez vos données en sécurité et comprenez nos mesures de sécurité",
+            count: 6,
+            color: "red"
+          },
+          {
+            icon: "Users",
+            title: "Gestion d'Équipe",
+            description: "Collaborez avec votre équipe et gérez les permissions",
+            count: 10,
+            color: "orange"
+          },
+          {
+            icon: "Globe",
+            title: "API & Intégrations",
+            description: "Connectez SYNAPSE avec vos outils et workflows existants",
+            count: 15,
+            color: "teal"
+          }
+        ]
+      },
+      popular: {
+        title: "Articles Populaires",
+        items: [
+          {
+            title: "Comment créer votre première visualisation de réseau",
+            category: "Premiers Pas",
+            readTime: "5 min de lecture",
+            rating: 4.8
+          },
+          {
+            title: "Comprendre les métriques et KPIs de réseau",
+            category: "Analyses & Rapports",
+            readTime: "8 min de lecture",
+            rating: 4.9
+          },
+          {
+            title: "Configurer les permissions et rôles d'équipe",
+            category: "Gestion d'Équipe",
+            readTime: "3 min de lecture",
+            rating: 4.7
+          },
+          {
+            title: "Exporter des données et rapports",
+            category: "Analyses & Rapports",
+            readTime: "4 min de lecture",
+            rating: 4.6
+          },
+          {
+            title: "Connecter des sources de données externes",
+            category: "API & Intégrations",
+            readTime: "12 min de lecture",
+            rating: 4.8
+          }
+        ]
+      },
+      resources: {
+        title: "Ressources Supplémentaires",
+        items: [
+          {
+            icon: "Video",
+            title: "Tutoriels Vidéo",
+            description: "Guides vidéo étape par étape pour toutes les fonctionnalités",
+            link: "Voir les Vidéos"
+          },
+          {
+            icon: "Download",
+            title: "Documentation",
+            description: "Documentation technique complète et référence API",
+            link: "Voir les Docs"
+          },
+          {
+            icon: "MessageCircle",
+            title: "Forum Communauté",
+            description: "Connectez-vous avec d'autres utilisateurs et partagez les meilleures pratiques",
+            link: "Rejoindre le Forum"
+          }
+        ]
+      },
+      contact: {
+        title: "Besoin d'Aide Supplémentaire ?",
+        subtitle: "Notre équipe de support est là pour vous assister 24/7",
+        options: [
+          {
+            title: "Chat en Direct",
+            description: "Obtenez une aide instantanée de notre équipe de support",
+            available: "Disponible maintenant",
+            action: "Démarrer le Chat"
+          },
+          {
+            title: "Support Email",
+            description: "Envoyez-nous un message détaillé et nous répondrons dans les 4 heures",
+            available: "Réponse en 4h",
+            action: "Envoyer un Email"
+          },
+          {
+            title: "Support Téléphonique",
+            description: "Appelez-nous directement pour les problèmes urgents",
+            available: "Lun-Ven 9h-18h EST",
+            action: "Appeler Maintenant"
+          }
+        ]
+      }
     }
-  },
-  fr: {
-    hero: {
-      title: "Centre d'Aide",
-      subtitle: "Trouvez des réponses à vos questions et apprenez à tirer le meilleur parti de SYNAPSE.",
-      searchPlaceholder: "Rechercher des articles d'aide..."
-    },
-    categories: {
-      title: "Parcourir par Catégorie",
-      items: [
-        {
-          icon: "Book",
-          title: "Premiers Pas",
-          description: "Apprenez les bases et configurez votre première analyse de réseau",
-          count: 12,
-          color: "blue"
-        },
-        {
-          icon: "BarChart",
-          title: "Analyses & Rapports",
-          description: "Comprendre vos données et créer des rapports significatifs",
-          count: 18,
-          color: "green"
-        },
-        {
-          icon: "Settings",
-          title: "Compte & Paramètres",
-          description: "Gérez votre compte, facturation et préférences",
-          count: 8,
-          color: "purple"
-        },
-        {
-          icon: "Shield",
-          title: "Sécurité & Confidentialité",
-          description: "Gardez vos données en sécurité et comprenez nos mesures de sécurité",
-          count: 6,
-          color: "red"
-        },
-        {
-          icon: "Users",
-          title: "Gestion d'Équipe",
-          description: "Collaborez avec votre équipe et gérez les permissions",
-          count: 10,
-          color: "orange"
-        },
-        {
-          icon: "Globe",
-          title: "API & Intégrations",
-          description: "Connectez SYNAPSE avec vos outils et workflows existants",
-          count: 15,
-          color: "teal"
-        }
-      ]
-    },
-    popular: {
-      title: "Articles Populaires",
-      items: [
-        {
-          title: "Comment créer votre première visualisation de réseau",
-          category: "Premiers Pas",
-          readTime: "5 min de lecture",
-          rating: 4.8
-        },
-        {
-          title: "Comprendre les métriques et KPIs de réseau",
-          category: "Analyses & Rapports",
-          readTime: "8 min de lecture",
-          rating: 4.9
-        },
-        {
-          title: "Configurer les permissions et rôles d'équipe",
-          category: "Gestion d'Équipe",
-          readTime: "3 min de lecture",
-          rating: 4.7
-        },
-        {
-          title: "Exporter des données et rapports",
-          category: "Analyses & Rapports",
-          readTime: "4 min de lecture",
-          rating: 4.6
-        },
-        {
-          title: "Connecter des sources de données externes",
-          category: "API & Intégrations",
-          readTime: "12 min de lecture",
-          rating: 4.8
-        }
-      ]
-    },
-    resources: {
-      title: "Ressources Supplémentaires",
-      items: [
-        {
-          icon: "Video",
-          title: "Tutoriels Vidéo",
-          description: "Guides vidéo étape par étape pour toutes les fonctionnalités",
-          link: "Voir les Vidéos"
-        },
-        {
-          icon: "Download",
-          title: "Documentation",
-          description: "Documentation technique complète et référence API",
-          link: "Voir les Docs"
-        },
-        {
-          icon: "MessageCircle",
-          title: "Forum Communauté",
-          description: "Connectez-vous avec d'autres utilisateurs et partagez les meilleures pratiques",
-          link: "Rejoindre le Forum"
-        }
-      ]
-    },
-    contact: {
-      title: "Besoin d'Aide Supplémentaire ?",
-      subtitle: "Notre équipe de support est là pour vous assister 24/7",
-      options: [
-        {
-          title: "Chat en Direct",
-          description: "Obtenez une aide instantanée de notre équipe de support",
-          available: "Disponible maintenant",
-          action: "Démarrer le Chat"
-        },
-        {
-          title: "Support Email",
-          description: "Envoyez-nous un message détaillé et nous répondrons dans les 4 heures",
-          available: "Réponse en 4h",
-          action: "Envoyer un Email"
-        },
-        {
-          title: "Support Téléphonique",
-          description: "Appelez-nous directement pour les problèmes urgents",
-          available: "Lun-Ven 9h-18h EST",
-          action: "Appeler Maintenant"
-        }
-      ]
-    }
-  }
-} as const;
-
-const iconMap = {
-  Book,
-  BarChart,
-  Settings,
-  Shield,
-  Users,
-  Globe,
-  Video,
-  Download,
-  MessageCircle,
-  HelpCircle,
-  Lightbulb
-};
-
-const colorClasses = {
-  blue: "from-blue-500 to-blue-600",
-  green: "from-green-500 to-green-600",
-  purple: "from-purple-500 to-purple-600",
-  red: "from-red-500 to-red-600",
-  orange: "from-orange-500 to-orange-600",
-  teal: "from-teal-500 to-teal-600"
-};
+  } as const;
+  
+  const iconMap = {
+    Book,
+    BarChart,
+    Settings,
+    Shield,
+    Users,
+    Globe,
+    Video,
+    Download,
+    MessageCircle,
+    HelpCircle,
+    Lightbulb
+  };
+  
+  const colorClasses = {
+    blue: "from-blue-500 to-blue-600",
+    green: "from-green-500 to-green-600",
+    purple: "from-purple-500 to-purple-600",
+    red: "from-red-500 to-red-600",
+    orange: "from-orange-500 to-orange-600",
+    teal: "from-teal-500 to-teal-600"
+  };
 
 export default function HelpPage() {
   const locale = useLocale();
@@ -335,10 +336,11 @@ export default function HelpPage() {
     article.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // FIX: Renamed 'label' to 'title' to match the expected TabItem type
   const tabItems = [
     {
       id: "all",
-      label: "All Articles",
+      title: "All Articles",
       content: (
         <div className="space-y-4">
           {filteredArticles.map((article, index) => (
@@ -371,7 +373,7 @@ export default function HelpPage() {
     },
     {
       id: "getting-started",
-      label: "Getting Started",
+      title: "Getting Started",
       content: (
         <div className="text-center py-12">
           <Book className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -386,7 +388,7 @@ export default function HelpPage() {
     },
     {
       id: "analytics",
-      label: "Analytics",
+      title: "Analytics",
       content: (
         <div className="text-center py-12">
           <BarChart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -403,7 +405,6 @@ export default function HelpPage() {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
       <section className="pt-20 pb-16 px-4 bg-gradient-to-br from-white via-gray-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900">
         <div className="container mx-auto text-center">
           <div className="fade-in">
@@ -419,7 +420,6 @@ export default function HelpPage() {
               {t.hero.subtitle}
             </p>
 
-            {/* Search Bar */}
             <div className="max-w-2xl mx-auto">
               <Input
                 icon={Search}
@@ -433,7 +433,6 @@ export default function HelpPage() {
         </div>
       </section>
 
-      {/* Categories Section */}
       <section className="py-20 px-4">
         <div className="container mx-auto">
           <div className="text-center mb-16">
@@ -480,7 +479,6 @@ export default function HelpPage() {
         </div>
       </section>
 
-      {/* Popular Articles */}
       <section className="py-20 px-4 bg-gray-50 dark:bg-gray-800/50">
         <div className="container mx-auto">
           <div className="text-center mb-16">
@@ -495,7 +493,6 @@ export default function HelpPage() {
         </div>
       </section>
 
-      {/* Resources Section */}
       <section className="py-20 px-4">
         <div className="container mx-auto">
           <div className="text-center mb-16">
@@ -536,7 +533,6 @@ export default function HelpPage() {
         </div>
       </section>
 
-      {/* Contact Support */}
       <section className="py-20 px-4 bg-gradient-to-r from-[#1e0546] to-[#8e43ff]">
         <div className="container mx-auto text-center text-white">
           <div className="mb-16">
