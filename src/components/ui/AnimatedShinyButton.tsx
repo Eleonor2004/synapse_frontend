@@ -1,10 +1,12 @@
 'use client';
 
-import { motion, type AnimationProps } from 'framer-motion';
+// FIX: Removed 'AnimationProps' as it does not exist in framer-motion
+import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowRight, Sparkles } from 'lucide-react';
+// FIX: Removed unused icon imports
 import React from 'react'; // Import React for ReactNode type
 
+// FIX: Removed the incorrect 'as AnimationProps' type assertion
 const animationProps = {
   initial: { 
     "--x": "100%", 
@@ -33,9 +35,8 @@ const animationProps = {
       mass: 0.8,
     },
   },
-} as AnimationProps;
+};
 
-// FIX: Define a Props interface that accepts children and an optional className
 interface AnimatedShinyButtonProps {
   children: React.ReactNode;
   className?: string;
@@ -47,7 +48,6 @@ export const AnimatedShinyButton = ({ children, className, href }: AnimatedShiny
     <Link href={href} passHref>
       <motion.button
         {...animationProps}
-        // FIX: Combine the default classes with the className from props
         className={`relative rounded-xl font-bold text-white backdrop-blur-xl transition-all duration-500 ease-out group-hover:shadow-2xl ${className}`}
         style={{
           background: 'linear-gradient(135deg, rgb(142 67 255) 0%, rgb(30 5 70) 100%)',
@@ -60,7 +60,6 @@ export const AnimatedShinyButton = ({ children, className, href }: AnimatedShiny
             maskImage: 'linear-gradient(-75deg, black calc(var(--x) + 20%), transparent calc(var(--x) + 30%), black calc(var(--x) + 100%))',
           }}
         >
-          {/* FIX: Render the children passed as props */}
           <div className="flex items-center justify-center gap-2">
             {children}
           </div>
