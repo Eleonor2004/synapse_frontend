@@ -13,27 +13,61 @@ interface Feature {
   key: string;
   gradient: string;
   delay: number;
-  title?: string; // Optional for simple features
-  description?: string; // Optional for simple features
+  title?: string;
+  description?: string;
 }
 
-// Simple features for potential backward compatibility or other uses
-const simpleFeatures: Feature[] = [
-  { icon: Network, key: 'feature1', gradient: 'from-purple-500 to-pink-500', delay: 0 },
-  { icon: Waypoints, key: 'feature2', gradient: 'from-blue-500 to-cyan-500', delay: 0.2 },
-  { icon: BarChart3, key: 'feature3', gradient: 'from-green-500 to-emerald-500', delay: 0.4 },
-];
-
 const enhancedFeatures: Feature[] = [
-  { icon: Brain, key: 'ai_powered', title: 'AI-Powered Analysis', description: 'Leverage machine learning algorithms to discover hidden patterns and insights in your network data.', gradient: 'from-purple-500 to-pink-500', delay: 0 },
-  { icon: Zap, key: 'real_time', title: 'Real-Time Processing', description: 'Process and visualize network changes as they happen with lightning-fast performance.', gradient: 'from-yellow-500 to-orange-500', delay: 0.1 },
-  { icon: Shield, key: 'secure', title: 'Enterprise Security', description: 'Bank-level encryption and security protocols to keep your sensitive network data protected.', gradient: 'from-blue-500 to-cyan-500', delay: 0.2 },
-  { icon: Globe, key: 'global_scale', title: 'Global Scale', description: 'Analyze networks of any size, from small teams to global enterprise infrastructures.', gradient: 'from-green-500 to-emerald-500', delay: 0.3 },
-  { icon: TrendingUp, key: 'predictive', title: 'Predictive Analytics', description: 'Forecast network behavior and identify potential issues before they impact your operations.', gradient: 'from-red-500 to-pink-500', delay: 0.4 },
-  { icon: Users, key: 'collaboration', title: 'Team Collaboration', description: 'Share insights and collaborate with your team in real-time with advanced permission controls.', gradient: 'from-indigo-500 to-purple-500', delay: 0.5 },
+  { 
+    icon: Brain, 
+    key: 'ai_powered', 
+    title: 'AI-Powered Analysis', 
+    description: 'Leverage machine learning algorithms to discover hidden patterns and insights in your network data.', 
+    gradient: 'from-purple-500 to-pink-500', 
+    delay: 0 
+  },
+  { 
+    icon: Zap, 
+    key: 'real_time', 
+    title: 'Real-Time Processing', 
+    description: 'Process and visualize network changes as they happen with lightning-fast performance.', 
+    gradient: 'from-yellow-500 to-orange-500', 
+    delay: 0.1 
+  },
+  { 
+    icon: Shield, 
+    key: 'secure', 
+    title: 'Enterprise Security', 
+    description: 'Bank-level encryption and security protocols to keep your sensitive network data protected.', 
+    gradient: 'from-blue-500 to-cyan-500', 
+    delay: 0.2 
+  },
+  { 
+    icon: Globe, 
+    key: 'global_scale', 
+    title: 'Global Scale', 
+    description: 'Analyze networks of any size, from small teams to global enterprise infrastructures.', 
+    gradient: 'from-green-500 to-emerald-500', 
+    delay: 0.3 
+  },
+  { 
+    icon: TrendingUp, 
+    key: 'predictive', 
+    title: 'Predictive Analytics', 
+    description: 'Forecast network behavior and identify potential issues before they impact your operations.', 
+    gradient: 'from-red-500 to-pink-500', 
+    delay: 0.4 
+  },
+  { 
+    icon: Users, 
+    key: 'collaboration', 
+    title: 'Team Collaboration', 
+    description: 'Share insights and collaborate with your team in real-time with advanced permission controls.', 
+    gradient: 'from-indigo-500 to-purple-500', 
+    delay: 0.5 
+  },
 ];
 
-// Strongly type the props
 interface InteractiveFeatureCardProps {
   feature: Feature;
 }
@@ -47,18 +81,29 @@ const InteractiveFeatureCard = ({ feature }: InteractiveFeatureCardProps) => {
     <motion.div
       ref={cardRef}
       initial={{ opacity: 0, y: 60, rotateX: -15 }}
-      animate={isInView ? { opacity: 1, y: 0, rotateX: 0, transition: { duration: 0.8, delay: feature.delay, ease: [0.4, 0, 0.2, 1] } } : {}}
+      animate={isInView ? { 
+        opacity: 1, 
+        y: 0, 
+        rotateX: 0, 
+        transition: { 
+          duration: 0.8, 
+          delay: feature.delay, 
+          ease: [0.4, 0, 0.2, 1] 
+        } 
+      } : {}}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       className="group relative"
     >
-      <div className="card-modern p-8 h-full bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30 transition-all duration-500">
+      <div className="card-modern p-8 h-full bg-card/60 dark:bg-card/50 backdrop-blur-sm border-border/30 dark:border-border/20 hover:border-primary/20 dark:hover:border-primary/30 transition-all duration-500 shadow-sm hover:shadow-xl">
+        {/* Gradient overlay - more subtle for light theme */}
         <motion.div
-          className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-500 rounded-xl`}
+          className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-[0.03] dark:group-hover:opacity-[0.08] transition-opacity duration-500 rounded-xl`}
           animate={isHovered ? { scale: 1.05 } : { scale: 1 }}
           transition={{ duration: 0.3 }}
         />
         
+        {/* Icon container - enhanced for light theme */}
         <motion.div
           animate={isHovered ? { y: -5, rotate: [0, -5, 5, 0], scale: 1.1 } : { y: 0, rotate: 0, scale: 1 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
@@ -69,6 +114,7 @@ const InteractiveFeatureCard = ({ feature }: InteractiveFeatureCardProps) => {
           </div>
         </motion.div>
 
+        {/* Content */}
         <div className="relative z-10">
           <motion.h3 
             className="text-2xl font-bold mb-4 text-foreground group-hover:text-primary transition-colors duration-300"
@@ -79,7 +125,7 @@ const InteractiveFeatureCard = ({ feature }: InteractiveFeatureCardProps) => {
           </motion.h3>
           
           <motion.p 
-            className="text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition-colors duration-300"
+            className="text-muted-foreground leading-relaxed group-hover:text-foreground/90 dark:group-hover:text-foreground/80 transition-colors duration-300"
             animate={isHovered ? { x: 5 } : { x: 0 }}
             transition={{ duration: 0.3, delay: 0.1 }}
           >
@@ -87,23 +133,36 @@ const InteractiveFeatureCard = ({ feature }: InteractiveFeatureCardProps) => {
           </motion.p>
         </div>
 
+        {/* Floating particles on hover */}
         {isHovered && (
           <div className="absolute inset-0 pointer-events-none">
-            {[...Array(8)].map((_, i) => (
+            {[...Array(6)].map((_, i) => (
               <motion.div
                 key={i}
                 className={`absolute w-1 h-1 bg-gradient-to-r ${feature.gradient} rounded-full`}
-                style={{ left: `${20 + Math.random() * 60}%`, top: `${20 + Math.random() * 60}%` }}
+                style={{ 
+                  left: `${20 + Math.random() * 60}%`, 
+                  top: `${20 + Math.random() * 60}%` 
+                }}
                 initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: [0, 1, 0], scale: [0, 1, 0], y: [-20, -40] }}
-                transition={{ duration: 1.5, delay: i * 0.1, ease: "easeOut" }}
+                animate={{ 
+                  opacity: [0, 0.6, 0], 
+                  scale: [0, 1, 0], 
+                  y: [-20, -40] 
+                }}
+                transition={{ 
+                  duration: 1.5, 
+                  delay: i * 0.1, 
+                  ease: "easeOut" 
+                }}
               />
             ))}
           </div>
         )}
 
+        {/* Bottom accent line */}
         <motion.div
-          className={`absolute bottom-0 left-0 h-1 bg-gradient-to-r ${feature.gradient} rounded-b-xl`}
+          className={`absolute bottom-0 left-0 h-1 bg-gradient-to-r ${feature.gradient} rounded-b-xl opacity-60`}
           initial={{ width: "0%" }}
           animate={isHovered ? { width: "100%" } : { width: "0%" }}
           transition={{ duration: 0.5 }}
@@ -113,46 +172,53 @@ const InteractiveFeatureCard = ({ feature }: InteractiveFeatureCardProps) => {
   );
 };
 
-
 export const FeatureList = () => {
   const t = useTranslations('FeatureList');
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, amount: 0.2 });
 
   return (
-    <section ref={sectionRef} className="relative py-24 md:py-32 bg-secondary/30 border-y border-border/50 overflow-hidden">
-      <div className="absolute inset-0 bg-dot-pattern [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_80%)]" />
-      <div className="absolute top-1/4 left-10 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-1/4 right-10 w-96 h-96 bg-primary-dark/5 rounded-full blur-3xl" />
+    <section ref={sectionRef} className="relative py-24 md:py-32 bg-secondary/20 dark:bg-secondary/30 border-y border-border/30 dark:border-border/20 overflow-hidden">
+      {/* Background patterns - theme aware */}
+      <div className="absolute inset-0 bg-dot-pattern [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_80%)]" />
+      
+      {/* Decorative elements - more subtle for light theme */}
+      <div className="absolute top-1/4 left-10 w-64 h-64 bg-primary/[0.02] dark:bg-primary/[0.08] rounded-full blur-3xl" />
+      <div className="absolute bottom-1/4 right-10 w-96 h-96 bg-primary-dark/[0.015] dark:bg-primary-dark/[0.06] rounded-full blur-3xl" />
       
       <div className="container relative z-10 mx-auto max-w-7xl px-4">
+        {/* Section header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
           className="text-center mb-20"
         >
+          {/* Badge */}
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={isInView ? { opacity: 1, scale: 1 } : {}}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm font-medium text-primary mb-6"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/8 dark:bg-primary/10 border border-primary/15 dark:border-primary/20 text-sm font-medium text-primary mb-6 shadow-sm"
           >
             <Zap className="w-4 h-4" />
             <span>Powerful Features</span>
           </motion.div>
           
+          {/* Main heading */}
           <h2 className="text-4xl md:text-6xl font-black mb-6">
             <span className="gradient-text">Everything you need</span>
             <br />
             <span className="text-foreground">to succeed</span>
           </h2>
           
+          {/* Description */}
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             {t('title')} Discover the comprehensive suite of tools designed to transform how you analyze and understand complex networks.
           </p>
         </motion.div>
 
+        {/* Features grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
           {enhancedFeatures.map((feature) => (
             <InteractiveFeatureCard 
@@ -162,6 +228,7 @@ export const FeatureList = () => {
           ))}
         </div>
 
+        {/* Call to action */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -172,7 +239,7 @@ export const FeatureList = () => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="btn-primary text-lg px-8 py-4"
+              className="btn-primary text-lg px-8 py-4 shadow-lg hover:shadow-xl"
             >
               <Zap className="w-5 h-5 mr-2" />
               Explore All Features
@@ -181,7 +248,7 @@ export const FeatureList = () => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="btn-ghost text-lg px-6 py-4 text-primary hover:bg-primary/10"
+              className="btn-ghost text-lg px-6 py-4 text-primary hover:bg-primary/8 dark:hover:bg-primary/10 border border-primary/20 rounded-xl shadow-sm hover:shadow-md"
             >
               Request Demo →
             </motion.button>
