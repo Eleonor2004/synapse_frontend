@@ -1,39 +1,30 @@
 // src/app/[locale]/workbench/page.tsx
+
 "use client";
 
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-// FIX: Import 'dynamic' from next/dynamic
-import dynamic from "next/dynamic";
+import { FileUploader } from "../../../components/workbench/FileUploader";
+import { NetworkGraph } from "../../../components/workbench/NetworkGraph";
+import { LocationGraph } from "../../../components/workbench/LocationGraph";
+import { FilterPanel } from "../../../components/workbench/FilterPanel";
+import { IndividualInfo } from "../../../components/workbench/IndividualInfo";
 import { AuthGuard } from "../../../components/auth/AuthGuard";
 import { useNotifications, NotificationContainer } from "../../../components/ui/Notification";
 import { LayoutGrid, Map, List, Eye, Loader2, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen } from "lucide-react";
 import { getMyListingSets, importListingsFile, getGraphDataForSets } from "../../../services/workbenchService";
-import { GraphResponse, ListingSet } from "../../../types/api";
+import { GraphResponse, ListingSet, LocationPoint } from "../../../types/api";
 
-// --- DYNAMIC IMPORTS ---
-// FIX: Load these components only on the client-side
-const NetworkGraph = dynamic(() => import("../../../components/workbench/NetworkGraph").then(mod => mod.NetworkGraph), {
-  ssr: false,
-  loading: () => <div className="h-full w-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin"/></div>
-});
-const LocationGraph = dynamic(() => import("../../../components/workbench/LocationGraph").then(mod => mod.LocationGraph), {
-  ssr: false,
-  loading: () => <div className="h-full w-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin"/></div>
-});
-const FileUploader = dynamic(() => import("../../../components/workbench/FileUploader").then(mod => mod.FileUploader), { ssr: false });
-const FilterPanel = dynamic(() => import("../../../components/workbench/FilterPanel").then(mod => mod.FilterPanel), { ssr: false });
-const IndividualInfo = dynamic(() => import("../../../components/workbench/IndividualInfo").then(mod => mod.IndividualInfo), { ssr: false });
-
-// --- INTERFACES (No Changes) ---
 type DynamicRow = Record<string, unknown>;
 
+// FIX: Updated ExcelData to potentially include pre-processed locations from the API.
 export interface ExcelData {
   listings?: DynamicRow[];
   subscribers?: DynamicRow[];
-  [key: string]: DynamicRow[] | undefined;
+  locations?: LocationPoint[]; // For pre-processed data from the backend
+  [key: string]: DynamicRow[] | LocationPoint[] | undefined;
 }
 
 export interface IndividualDetails {
@@ -60,12 +51,10 @@ interface Filters {
   minInteractions: number;
 }
 
-
 export default function WorkbenchPage() {
   const { addNotification, notifications, removeNotification } = useNotifications();
   const queryClient = useQueryClient();
 
-  // --- STATE MANAGEMENT (No Changes) ---
   const [selectedListingSet, setSelectedListingSet] = useState<ListingSet | null>(null);
   const [selectedIndividual, setSelectedIndividual] = useState<Individual | null>(null);
   const [clientSideData, setClientSideData] = useState<ExcelData | null>(null);
@@ -80,7 +69,6 @@ export default function WorkbenchPage() {
     minInteractions: 0
   });
 
-  // --- DATA FETCHING (No Changes) ---
   const { data: listingSets, isLoading: isLoadingSets } = useQuery({
     queryKey: ['listingSets'],
     queryFn: getMyListingSets,
@@ -103,7 +91,6 @@ export default function WorkbenchPage() {
     },
   });
 
-  // --- EVENT HANDLERS (No Changes) ---
   const handleFileUpload = (parsedData: ExcelData, analysisName: string) => {
     if (!analysisName || !parsedData.listings) return;
     
@@ -129,27 +116,37 @@ export default function WorkbenchPage() {
     setSelectedIndividual(null);
   }
   
-  // --- DERIVED STATE (No Changes) ---
+  // FIX: Updated the logic to correctly pass both network and location data from the API.
   const activeData: ExcelData | null = useMemo(() => {
+    // Priority 1: Use client-side data for new uploads. It's raw and needs parsing.
     if (clientSideData) {
       return clientSideData;
     }
-    if (remoteGraphData && remoteGraphData.network) {
-        const transformedListings = remoteGraphData.network.nodes.map(node => {
-            return {
-                id: node.id,
-                label: node.label,
-                ...node.properties
-            };
-        });
-        return { listings: transformedListings };
+    
+    // Priority 2: Use remote data for past analyses.
+    if (remoteGraphData) {
+      // The API returns both processed network data and processed location data.
+      // We need to pass both to our components.
+      const transformedListings = remoteGraphData.network.nodes.map(node => ({
+          id: node.id,
+          label: node.label,
+          ...node.properties
+      }));
+
+      return { 
+        listings: transformedListings, 
+        locations: remoteGraphData.locations // Pass the pre-processed locations through.
+      };
     }
+
     return null;
   }, [clientSideData, remoteGraphData]);
 
   const isAnalysisView = !!activeData;
 
-  // --- RENDER LOGIC (No Changes) ---
+  // ... rest of the component remains the same
+  // (renderWelcomeView and renderAnalysisView functions)
+
   const renderWelcomeView = () => (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] p-6">
         <motion.div 

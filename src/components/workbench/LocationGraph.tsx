@@ -7,10 +7,10 @@ import { MapPin, Navigation, Phone, MessageSquare, User, Layers } from 'lucide-r
 import 'leaflet/dist/leaflet.css';
 import { MapView } from './MapView';
 import { ExcelData, Individual } from '@/app/[locale]/workbench/page';
+import { LocationPoint as ApiLocationPoint } from '@/types/api'; // Import the type from api.ts
 
 type DynamicRow = Record<string, unknown>;
 
-// Define the shape of the filters object
 interface Filters {
   interactionType: "all" | "calls" | "sms";
   dateRange: { start: string; end: string };
@@ -18,6 +18,7 @@ interface Filters {
   minInteractions: number;
 }
 
+// Keep the local LocationPoint for internal use
 interface LocationPoint {
   id: string;
   phoneNumber: string;
@@ -29,7 +30,7 @@ interface LocationPoint {
 
 interface LocationGraphProps {
   data: ExcelData | null;
-  filters: Filters; // Use the specific Filters type
+  filters: Filters;
   onIndividualSelect: (individual: Individual) => void;
 }
 
@@ -84,6 +85,28 @@ export const LocationGraph: React.FC<LocationGraphProps> = ({ data, filters, onI
   const [selectedIndividual, setSelectedIndividual] = useState<string | null>(null);
 
   const processedData = useMemo(() => {
+    // FIX: Check for pre-processed location data first.
+    if (data?.locations && data.locations.length > 0) {
+        const preprocessed = data.locations.map((loc, index) => ({
+            ...loc,
+            id: `${loc.lat}-${loc.lng}-${index}`, // Ensure a unique ID
+            latitude: loc.lat,
+            longitude: loc.lng,
+            phoneNumber: 'Unknown', // Placeholder, as this info might not come from the API this way
+            timestamp: new Date(loc.timestamp),
+        }));
+        
+        const paths = new Map<string, LocationPoint[]>();
+        preprocessed.forEach(p => {
+          // This logic might need adjustment based on how you identify individuals in API location data
+          const key = p.phoneNumber; 
+          if (!paths.has(key)) paths.set(key, []);
+          paths.get(key)!.push(p);
+        });
+
+        return { locationData: preprocessed, individualPaths: paths };
+    }
+
     const interactionList = data?.listings;
     if (!interactionList || !Array.isArray(interactionList)) {
       return { locationData: [], individualPaths: new Map() };
@@ -92,10 +115,11 @@ export const LocationGraph: React.FC<LocationGraphProps> = ({ data, filters, onI
     const processedLocations: LocationPoint[] = [];
     const pathsByIndividual = new Map<string, LocationPoint[]>();
     
-    const possibleCallerFields = ['caller_num', 'Numéro Appelant', 'numero appelant', 'source'];
-    const possibleLocationFields = ['location', 'Localisation numéro appelant', 'localisation_numero_appelant'];
-    const possibleDateFields = ['timestamp', 'Date Début appel', 'date_debut_appel', 'date'];
-    const possibleDurationFields = ['duration_str', 'Durée appel', 'duree_appel'];
+    // FIX: Reverted to simpler, more reliable field names from the version that worked.
+    const possibleCallerFields = ['caller_num', 'Numéro Appelant'];
+    const possibleLocationFields = ['location', 'Localisation numéro appelant'];
+    const possibleDateFields = ['timestamp', 'Date Début appel'];
+    const possibleDurationFields = ['duration_str', 'Durée appel'];
 
     interactionList.forEach((listing, index) => {
       if (typeof listing !== 'object' || listing === null) return;
@@ -116,10 +140,8 @@ export const LocationGraph: React.FC<LocationGraphProps> = ({ data, filters, onI
 
       const { isSMS } = parseDuration(durationStr);
       const interactionType = isSMS ? 'sms' : 'call';
-      
-      // FIX: Changed 'let' to 'const' as 'date' is never reassigned.
       const date = new Date(dateStr);
-      if(isNaN(date.getTime())) return; // Skip if date is invalid
+      if(isNaN(date.getTime())) return;
 
       const locationPoint: LocationPoint = {
         id: `${caller}_${dateStr}_${index}`, phoneNumber: caller, latitude, longitude,
@@ -136,7 +158,8 @@ export const LocationGraph: React.FC<LocationGraphProps> = ({ data, filters, onI
     pathsByIndividual.forEach(path => path.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()));
     return { locationData: processedLocations, individualPaths: pathsByIndividual };
   }, [data]);
-
+  
+  // ... rest of the component remains the same
   const { locationData, individualPaths } = processedData;
 
   const filteredData = useMemo(() => {

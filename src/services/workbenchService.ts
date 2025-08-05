@@ -5,8 +5,6 @@ import { ListingSet, GraphResponse } from "../types/api";
 
 /**
  * Uploads a listing file to the backend to create a new ListingSet.
- * @param name - The name for the new analysis/ListingSet.
- * @param listings - An array of records from the uploaded file.
  */
 export const importListingsFile = async ({ name, listings }: { name: string; listings: Record<string, unknown>[] }): Promise<{ message: string; listing_set: ListingSet }> => {
   const payload = { name, listings };
@@ -27,6 +25,9 @@ export const getMyListingSets = async (): Promise<ListingSet[]> => {
  * @param listing_set_ids - An array of ListingSet IDs to visualize.
  */
 export const getGraphDataForSets = async (listing_set_ids: string[]): Promise<GraphResponse> => {
-  const response = await apiClient.post('/workbench/visualize', { listing_set_ids }); // Pass as an object
+  // FIX: Reverted the request body to send the array directly.
+  // The backend expects a simple array `["id1", "id2"]`, not an object `{"listing_set_ids": [...]}`.
+  // This fixes the 422 Unprocessable Content error.
+  const response = await apiClient.post('/workbench/visualize', listing_set_ids);
   return response.data;
 };
