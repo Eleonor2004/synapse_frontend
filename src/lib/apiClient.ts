@@ -5,7 +5,7 @@ const apiClient = axios.create({
   // Set the base URL for all API requests.
   // This means we can use relative paths like '/auth/token' later on.
   //baseURL: 'http://localhost:8001/api/v1',
-  baseURL: 'https://synapse-backend-1.onrender.com',
+  baseURL: 'https://synapse-backend-1.onrender.com/api/v1',
   // Set default headers for all requests
   headers: {
     'Content-Type': 'application/json',
