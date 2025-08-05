@@ -6,9 +6,10 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileUploader } from "../../../components/workbench/FileUploader";
-import { NetworkGraph } from "../../../components/workbench/NetworkGraph";
-import { LocationGraph } from "../../../components/workbench/LocationGraph";
+// FIX: Import 'dynamic' from 'next/dynamic'
+import dynamic from 'next/dynamic';
+
+// We keep these imports because they are server-safe
 import { FilterPanel } from "../../../components/workbench/FilterPanel";
 import { IndividualInfo } from "../../../components/workbench/IndividualInfo";
 import { AuthGuard } from "../../../components/auth/AuthGuard";
@@ -17,13 +18,30 @@ import { LayoutGrid, Map, List, Eye, Loader2, PanelLeftClose, PanelRightClose, P
 import { getMyListingSets, importListingsFile, getGraphDataForSets } from "../../../services/workbenchService";
 import { GraphResponse, ListingSet, LocationPoint } from "../../../types/api";
 
+// FIX: Dynamically import the client-only components
+const NetworkGraph = dynamic(() => 
+  import("../../../components/workbench/NetworkGraph").then(mod => mod.NetworkGraph), 
+  { ssr: false, loading: () => <div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin"/></div> }
+);
+
+const LocationGraph = dynamic(() => 
+  import("../../../components/workbench/LocationGraph").then(mod => mod.LocationGraph),
+  { ssr: false, loading: () => <div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin"/></div> }
+);
+
+// We don't need to dynamically import FileUploader as it should be server-safe
+import { FileUploader } from "../../../components/workbench/FileUploader";
+
+// ... the rest of your component code is IDENTICAL to what you had before ...
+// (interfaces, the WorkbenchPage component, etc.)
+
+// --- INTERFACES (No changes) ---
 type DynamicRow = Record<string, unknown>;
 
-// FIX: Updated ExcelData to potentially include pre-processed locations from the API.
 export interface ExcelData {
   listings?: DynamicRow[];
   subscribers?: DynamicRow[];
-  locations?: LocationPoint[]; // For pre-processed data from the backend
+  locations?: LocationPoint[]; 
   [key: string]: DynamicRow[] | LocationPoint[] | undefined;
 }
 
@@ -51,6 +69,8 @@ interface Filters {
   minInteractions: number;
 }
 
+
+// --- COMPONENT (No changes, except for the imports above) ---
 export default function WorkbenchPage() {
   const { addNotification, notifications, removeNotification } = useNotifications();
   const queryClient = useQueryClient();
@@ -116,17 +136,11 @@ export default function WorkbenchPage() {
     setSelectedIndividual(null);
   }
   
-  // FIX: Updated the logic to correctly pass both network and location data from the API.
   const activeData: ExcelData | null = useMemo(() => {
-    // Priority 1: Use client-side data for new uploads. It's raw and needs parsing.
     if (clientSideData) {
       return clientSideData;
     }
-    
-    // Priority 2: Use remote data for past analyses.
     if (remoteGraphData) {
-      // The API returns both processed network data and processed location data.
-      // We need to pass both to our components.
       const transformedListings = remoteGraphData.network.nodes.map(node => ({
           id: node.id,
           label: node.label,
@@ -135,17 +149,13 @@ export default function WorkbenchPage() {
 
       return { 
         listings: transformedListings, 
-        locations: remoteGraphData.locations // Pass the pre-processed locations through.
+        locations: remoteGraphData.locations
       };
     }
-
     return null;
   }, [clientSideData, remoteGraphData]);
 
   const isAnalysisView = !!activeData;
-
-  // ... rest of the component remains the same
-  // (renderWelcomeView and renderAnalysisView functions)
 
   const renderWelcomeView = () => (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] p-6">
@@ -162,7 +172,6 @@ export default function WorkbenchPage() {
                     onError={(e) => addNotification("error", "File Parsing Error", e)} 
                 />
             </div>
-
             <div className="mt-12">
                 <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 justify-center"><List className="w-5 h-5" /> My Past Analyses</h2>
                 {isLoadingSets ? (
@@ -209,7 +218,6 @@ export default function WorkbenchPage() {
                 </motion.div>
             )}
         </AnimatePresence>
-
         <div className="flex-1 flex flex-col min-w-0">
             <div className="flex-shrink-0 bg-card border border-border rounded-lg p-2 mb-4">
                 <div className="flex items-center justify-between">
@@ -248,7 +256,6 @@ export default function WorkbenchPage() {
                 )}
             </div>
         </div>
-
         <AnimatePresence>
             {isIndividualPanelOpen && (
                 <motion.div

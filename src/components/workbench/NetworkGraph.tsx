@@ -510,5 +510,3 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
   );
 };
 
-// Dummy variable to check dark mode (replace with your actual theme logic)
-const isDarkMode = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
