@@ -1,9 +1,13 @@
-
 // src/components/ui/Input.tsx
+
+// FIX: Import React to use its types
+import React from 'react';
+
+// FIX: Replace 'LucideIcon' with the correct type 'React.ElementType'
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
-  icon?: LucideIcon;
+  icon?: React.ElementType;
   iconPosition?: 'left' | 'right';
 }
 

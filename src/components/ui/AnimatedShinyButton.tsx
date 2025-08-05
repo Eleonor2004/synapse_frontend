@@ -1,12 +1,12 @@
 'use client';
 
-// FIX: Removed 'AnimationProps' as it does not exist in framer-motion
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-// FIX: Removed unused icon imports
-import React from 'react'; // Import React for ReactNode type
+import React from 'react';
 
-// FIX: Removed the incorrect 'as AnimationProps' type assertion
+// FIX: Added 'as const' at the end of the object.
+// This tells TypeScript to infer the most specific possible types,
+// preventing `type: "spring"` from being widened to `type: string`.
 const animationProps = {
   initial: { 
     "--x": "100%", 
@@ -17,7 +17,12 @@ const animationProps = {
   },
   whileHover: { 
     scale: 1.05,
-    transition: { duration: 0.2 }
+    transition: {
+      type: "spring",
+      stiffness: 200,
+      damping: 20,
+      mass: 0.8,
+    },
   },
   whileTap: { scale: 0.98 },
   transition: {
@@ -28,14 +33,8 @@ const animationProps = {
     stiffness: 20,
     damping: 15,
     mass: 2,
-    scale: {
-      type: "spring",
-      stiffness: 200,
-      damping: 20,
-      mass: 0.8,
-    },
   },
-};
+} as const; // <--- THE CRITICAL FIX IS HERE
 
 interface AnimatedShinyButtonProps {
   children: React.ReactNode;

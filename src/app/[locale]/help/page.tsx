@@ -1,4 +1,4 @@
-
+// src/app/[locale]/help/page.tsx
 "use client";
 
 import { useLocale } from "next-intl";
@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Card } from "../../../components/ui/Card";
 import { Input } from "../../../components/ui/Input";
 import { Badge } from "../../../components/ui/Badge";
-import { Tabs } from "../../../components/ui/Tabs"; // Import TabItem type if available from the component
+import { Tabs } from "../../../components/ui/Tabs";
 import { 
   Search, 
   Book, 
@@ -26,7 +26,7 @@ import {
   Star
 } from "lucide-react";
 
-// NOTE: All translation and constant data remains the same as you provided...
+// All constant data (translations, iconMap, etc.) remains the same.
 const translations = {
     en: {
       hero: {
@@ -301,29 +301,29 @@ const translations = {
       }
     }
   } as const;
-  
-  const iconMap = {
-    Book,
-    BarChart,
-    Settings,
-    Shield,
-    Users,
-    Globe,
-    Video,
-    Download,
-    MessageCircle,
-    HelpCircle,
-    Lightbulb
-  };
-  
-  const colorClasses = {
-    blue: "from-blue-500 to-blue-600",
-    green: "from-green-500 to-green-600",
-    purple: "from-purple-500 to-purple-600",
-    red: "from-red-500 to-red-600",
-    orange: "from-orange-500 to-orange-600",
-    teal: "from-teal-500 to-teal-600"
-  };
+
+const iconMap = {
+  Book,
+  BarChart,
+  Settings,
+  Shield,
+  Users,
+  Globe,
+  Video,
+  Download,
+  MessageCircle,
+  HelpCircle,
+  Lightbulb
+};
+
+const colorClasses = {
+  blue: "from-blue-500 to-blue-600",
+  green: "from-green-500 to-green-600",
+  purple: "from-purple-500 to-purple-600",
+  red: "from-red-500 to-red-600",
+  orange: "from-orange-500 to-orange-600",
+  teal: "from-teal-500 to-teal-600"
+};
 
 export default function HelpPage() {
   const locale = useLocale();
@@ -336,11 +336,11 @@ export default function HelpPage() {
     article.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // FIX: Renamed 'label' to 'title' to match the expected TabItem type
   const tabItems = [
     {
       id: "all",
-      title: "All Articles",
+      // FIX: Changed 'title' back to 'label' to match the Tabs component's prop type
+      label: "All Articles",
       content: (
         <div className="space-y-4">
           {filteredArticles.map((article, index) => (
@@ -373,7 +373,8 @@ export default function HelpPage() {
     },
     {
       id: "getting-started",
-      title: "Getting Started",
+      // FIX: Changed 'title' back to 'label'
+      label: "Getting Started",
       content: (
         <div className="text-center py-12">
           <Book className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -388,7 +389,8 @@ export default function HelpPage() {
     },
     {
       id: "analytics",
-      title: "Analytics",
+      // FIX: Changed 'title' back to 'label'
+      label: "Analytics",
       content: (
         <div className="text-center py-12">
           <BarChart className="w-16 h-16 text-gray-400 mx-auto mb-4" />
