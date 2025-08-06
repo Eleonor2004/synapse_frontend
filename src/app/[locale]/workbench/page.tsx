@@ -140,7 +140,7 @@ export default function WorkbenchPage() {
     if (clientSideData) {
       return clientSideData;
     }
-    if (remoteGraphData) {
+    if (remoteGraphData && remoteGraphData.network && remoteGraphData.network.nodes) {
       const transformedListings = remoteGraphData.network.nodes.map(node => ({
           id: node.id,
           label: node.label,
