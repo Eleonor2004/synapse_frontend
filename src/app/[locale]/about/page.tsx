@@ -1,14 +1,13 @@
-// src/app/[locale]/about/page.tsx
 "use client";
 
 import { useLocale } from "next-intl";
 import { Card } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
-import { 
-  Users, 
-  Target, 
-  Award, 
-  Globe, 
+import {
+  Users,
+  Target,
+  Award,
+  Globe,
   Heart,
   Lightbulb,
   Shield,
@@ -222,6 +221,7 @@ const translations = {
   }
 } as const;
 
+
 const iconMap = {
   Lightbulb,
   Shield,
@@ -239,16 +239,42 @@ export default function AboutPage() {
   const locale = useLocale();
   const t = translations[locale as keyof typeof translations] || translations.en;
 
+  // --- Light Theme Colors ---
+  const light = {
+    bg: "bg-white",
+    sectionBg: "bg-slate-50",
+    gradientHero: "bg-gradient-to-br from-white to-blue-50",
+    cardBg: "bg-white",
+    cardBorder: "border-slate-200",
+    cardHoverBorder: "hover:border-purple-300",
+    textPrimary: "text-slate-900",
+    textSecondary: "text-slate-600",
+    timelineDotBorder: "border-white"
+  };
+
+  // --- Dark Theme Colors ---
+  const dark = {
+    bg: "dark:bg-[#121212]",
+    sectionBg: "dark:bg-gray-900/50",
+    gradientHero: "dark:from-[#121212] dark:via-gray-900/50 dark:to-purple-900/20",
+    cardBg: "dark:bg-gray-900/50",
+    cardBorder: "dark:border-gray-800",
+    cardHoverBorder: "dark:hover:border-gray-600",
+    textPrimary: "dark:text-gray-100",
+    textSecondary: "dark:text-gray-300",
+    timelineDotBorder: "dark:border-gray-900"
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className={`min-h-screen ${light.bg} ${dark.bg}`}>
       {/* Hero Section */}
-      <section className="pt-20 pb-32 px-4 bg-gradient-to-br from-background via-slate-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900">
+      <section className={`pt-20 pb-32 px-4 ${light.gradientHero} ${dark.gradientHero}`}>
         <div className="container mx-auto text-center">
           <div className="fade-in">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 text-gray-900 dark:text-white">
+            <h1 className={`text-5xl md:text-6xl font-bold mb-6 ${light.textPrimary} ${dark.textPrimary}`}>
               {t.hero.title}
             </h1>
-            <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-4xl mx-auto leading-relaxed">
+            <p className={`text-xl md:text-2xl ${light.textSecondary} ${dark.textSecondary} max-w-4xl mx-auto leading-relaxed`}>
               {t.hero.subtitle}
             </p>
           </div>
@@ -256,29 +282,29 @@ export default function AboutPage() {
       </section>
 
       {/* Mission & Vision */}
-      <section className="py-20 px-4 bg-background">
+      <section className={`py-20 px-4 ${light.bg} ${dark.bg}`}>
         <div className="container mx-auto">
           <div className="grid md:grid-cols-2 gap-12 mb-20">
-            <Card className="p-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-all duration-300">
+            <Card className={`p-8 ${light.cardBg} ${dark.cardBg} border ${light.cardBorder} ${dark.cardBorder} shadow-lg hover:shadow-xl ${light.cardHoverBorder} ${dark.cardHoverBorder} transition-all duration-300`}>
               <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
                 <Target className="w-8 h-8 text-white" />
               </div>
-              <h2 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">
+              <h2 className={`text-3xl font-bold mb-4 ${light.textPrimary} ${dark.textPrimary}`}>
                 {t.mission.title}
               </h2>
-              <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg">
+              <p className={`${light.textSecondary} ${dark.textSecondary} leading-relaxed text-lg`}>
                 {t.mission.description}
               </p>
             </Card>
 
-            <Card className="p-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-all duration-300">
+            <Card className={`p-8 ${light.cardBg} ${dark.cardBg} border ${light.cardBorder} ${dark.cardBorder} shadow-lg hover:shadow-xl ${light.cardHoverBorder} ${dark.cardHoverBorder} transition-all duration-300`}>
               <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
                 <Award className="w-8 h-8 text-white" />
               </div>
-              <h2 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">
+              <h2 className={`text-3xl font-bold mb-4 ${light.textPrimary} ${dark.textPrimary}`}>
                 {t.vision.title}
               </h2>
-              <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg">
+              <p className={`${light.textSecondary} ${dark.textSecondary} leading-relaxed text-lg`}>
                 {t.vision.description}
               </p>
             </Card>
@@ -287,10 +313,10 @@ export default function AboutPage() {
       </section>
 
       {/* Values Section */}
-      <section className="py-20 px-4 bg-gray-50 dark:bg-gray-800/50">
+      <section className={`py-20 px-4 ${light.sectionBg} ${dark.bg}`}>
         <div className="container mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900 dark:text-white">
+            <h2 className={`text-4xl md:text-5xl font-bold mb-6 ${light.textPrimary} ${dark.textPrimary}`}>
               {t.values.title}
             </h2>
           </div>
@@ -299,26 +325,22 @@ export default function AboutPage() {
             {t.values.items.map((value, index) => {
               const IconComponent = iconMap[value.icon as keyof typeof iconMap];
               const gradientColors = [
-                'from-blue-500 to-cyan-500',
-                'from-green-500 to-emerald-500',
-                'from-purple-500 to-violet-500',
-                'from-pink-500 to-rose-500',
-                'from-orange-500 to-yellow-500',
-                'from-teal-500 to-blue-500'
+                'from-blue-500 to-cyan-500', 'from-green-500 to-emerald-500', 'from-purple-500 to-violet-500',
+                'from-pink-500 to-rose-500', 'from-orange-500 to-yellow-500', 'from-teal-500 to-blue-500'
               ];
               
               return (
                 <Card 
                   key={index} 
-                  className="p-8 text-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                  className={`p-8 text-center ${light.cardBg} ${dark.cardBg} border ${light.cardBorder} ${dark.cardBorder} shadow-lg hover:shadow-xl hover:scale-105 ${light.cardHoverBorder} ${dark.cardHoverBorder} transition-all duration-300`}
                 >
                   <div className={`w-16 h-16 bg-gradient-to-r ${gradientColors[index % gradientColors.length]} rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg`}>
                     <IconComponent className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
+                  <h3 className={`text-xl font-bold mb-4 ${light.textPrimary} ${dark.textPrimary}`}>
                     {value.title}
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                  <p className={`${light.textSecondary} ${dark.textSecondary} leading-relaxed`}>
                     {value.description}
                   </p>
                 </Card>
@@ -329,10 +351,10 @@ export default function AboutPage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 px-4 bg-background">
+      <section className={`py-20 px-4 ${light.bg} ${dark.bg}`}>
         <div className="container mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900 dark:text-white">
+            <h2 className={`text-4xl md:text-5xl font-bold mb-6 ${light.textPrimary} ${dark.textPrimary}`}>
               {t.stats.title}
             </h2>
           </div>
@@ -341,12 +363,12 @@ export default function AboutPage() {
             {t.stats.items.map((stat, index) => (
               <Card 
                 key={index} 
-                className="p-6 text-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                className={`p-6 text-center ${light.cardBg} ${dark.cardBg} border ${light.cardBorder} ${dark.cardBorder} shadow-lg hover:shadow-xl hover:scale-105 ${light.cardHoverBorder} ${dark.cardHoverBorder} transition-all duration-300`}
               >
                 <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
                   {stat.number}
                 </div>
-                <div className="text-gray-600 dark:text-gray-400 font-medium text-sm">
+                <div className={`${light.textSecondary} dark:text-gray-400 font-medium text-sm`}>
                   {stat.label}
                 </div>
               </Card>
@@ -356,13 +378,13 @@ export default function AboutPage() {
       </section>
 
       {/* Team Section */}
-      <section className="py-20 px-4 bg-gray-50 dark:bg-gray-800/50">
+      <section className={`py-20 px-4 ${light.sectionBg} ${dark.sectionBg}`}>
         <div className="container mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900 dark:text-white">
+            <h2 className={`text-4xl md:text-5xl font-bold mb-6 ${light.textPrimary} ${dark.textPrimary}`}>
               {t.team.title}
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+            <p className={`text-xl ${light.textSecondary} ${dark.textSecondary} max-w-3xl mx-auto`}>
               {t.team.description}
             </p>
           </div>
@@ -371,16 +393,16 @@ export default function AboutPage() {
             {t.team.members.map((member, index) => (
               <Card 
                 key={index} 
-                className="p-8 text-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                className={`p-8 text-center ${light.cardBg} ${dark.cardBg} border ${light.cardBorder} ${dark.cardBorder} shadow-lg hover:shadow-xl hover:scale-105 ${light.cardHoverBorder} ${dark.cardHoverBorder} transition-all duration-300`}
               >
                 <div className="text-6xl mb-4">{member.image}</div>
-                <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">
+                <h3 className={`text-xl font-bold mb-2 ${light.textPrimary} ${dark.textPrimary}`}>
                   {member.name}
                 </h3>
                 <Badge variant="primary" className="mb-4 bg-gradient-to-r from-purple-500 to-blue-500 text-white border-none">
                   {member.role}
                 </Badge>
-                <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
+                <p className={`${light.textSecondary} ${dark.textSecondary} text-sm leading-relaxed`}>
                   {member.bio}
                 </p>
               </Card>
@@ -390,17 +412,16 @@ export default function AboutPage() {
       </section>
 
       {/* Timeline Section */}
-      <section className="py-20 px-4 bg-background">
+      <section className={`py-20 px-4 ${light.bg} ${dark.bg}`}>
         <div className="container mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900 dark:text-white">
+            <h2 className={`text-4xl md:text-5xl font-bold mb-6 ${light.textPrimary} ${dark.textPrimary}`}>
               {t.timeline.title}
             </h2>
           </div>
 
           <div className="relative">
-            {/* Timeline line */}
-            <div className="absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-purple-500 to-blue-500" />
+            <div className="absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-purple-300 to-blue-300" />
             
             <div className="space-y-12">
               {t.timeline.events.map((event, index) => (
@@ -411,7 +432,7 @@ export default function AboutPage() {
                   }`}
                 >
                   <Card 
-                    className={`w-full max-w-md p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl ${
+                    className={`w-full max-w-md p-6 ${light.cardBg} ${dark.cardBg} border ${light.cardBorder} ${dark.cardBorder} shadow-lg hover:shadow-xl ${light.cardHoverBorder} ${dark.cardHoverBorder} ${
                       index % 2 === 0 ? 'mr-8' : 'ml-8'
                     } hover:scale-105 transition-all duration-300`}
                   >
@@ -419,17 +440,16 @@ export default function AboutPage() {
                       <Badge variant="primary" size="lg" className="mr-4 bg-gradient-to-r from-purple-500 to-blue-500 text-white border-none">
                         {event.year}
                       </Badge>
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                      <h3 className={`text-xl font-bold ${light.textPrimary} ${dark.textPrimary}`}>
                         {event.title}
                       </h3>
                     </div>
-                    <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                    <p className={`${light.textSecondary} ${dark.textSecondary} leading-relaxed`}>
                       {event.description}
                     </p>
                   </Card>
                   
-                  {/* Timeline dot */}
-                  <div className="absolute left-1/2 transform -translate-x-1/2 w-4 h-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full border-4 border-white dark:border-gray-900 shadow-lg" />
+                  <div className={`absolute left-1/2 transform -translate-x-1/2 w-4 h-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full border-4 ${light.timelineDotBorder} ${dark.timelineDotBorder} shadow-lg`} />
                 </div>
               ))}
             </div>
