@@ -6,10 +6,8 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-// FIX: Import 'dynamic' from 'next/dynamic'
 import dynamic from 'next/dynamic';
 
-// We keep these imports because they are server-safe
 import { FilterPanel } from "../../../components/workbench/FilterPanel";
 import { IndividualInfo } from "../../../components/workbench/IndividualInfo";
 import { AuthGuard } from "../../../components/auth/AuthGuard";
@@ -18,7 +16,6 @@ import { LayoutGrid, Map, List, Eye, Loader2, PanelLeftClose, PanelRightClose, P
 import { getMyListingSets, importListingsFile, getGraphDataForSets } from "../../../services/workbenchService";
 import { GraphResponse, ListingSet, LocationPoint } from "../../../types/api";
 
-// FIX: Dynamically import the client-only components
 const NetworkGraph = dynamic(() => 
   import("../../../components/workbench/NetworkGraph").then(mod => mod.NetworkGraph), 
   { ssr: false, loading: () => <div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin"/></div> }
@@ -29,13 +26,8 @@ const LocationGraph = dynamic(() =>
   { ssr: false, loading: () => <div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin"/></div> }
 );
 
-// We don't need to dynamically import FileUploader as it should be server-safe
 import { FileUploader } from "../../../components/workbench/FileUploader";
 
-// ... the rest of your component code is IDENTICAL to what you had before ...
-// (interfaces, the WorkbenchPage component, etc.)
-
-// --- INTERFACES (No changes) ---
 type DynamicRow = Record<string, unknown>;
 
 export interface ExcelData {
@@ -69,8 +61,6 @@ interface Filters {
   minInteractions: number;
 }
 
-
-// --- COMPONENT (No changes, except for the imports above) ---
 export default function WorkbenchPage() {
   const { addNotification, notifications, removeNotification } = useNotifications();
   const queryClient = useQueryClient();
@@ -89,15 +79,21 @@ export default function WorkbenchPage() {
     minInteractions: 0
   });
 
+  // Check if we are on the client-side
+  const isClient = typeof window !== 'undefined';
+
   const { data: listingSets, isLoading: isLoadingSets } = useQuery({
     queryKey: ['listingSets'],
     queryFn: getMyListingSets,
+    // FIX: Only enable this query when running in the browser.
+    enabled: isClient,
   });
   
   const { data: remoteGraphData, isLoading: isLoadingGraph } = useQuery({
     queryKey: ['graphData', selectedListingSet?.id],
     queryFn: (): Promise<GraphResponse> => getGraphDataForSets([selectedListingSet!.id]),
-    enabled: !!selectedListingSet,
+    // FIX: Only enable this query if a set is selected AND we are in the browser.
+    enabled: !!selectedListingSet && isClient,
   });
 
   const uploadMutation = useMutation({
@@ -140,6 +136,7 @@ export default function WorkbenchPage() {
     if (clientSideData) {
       return clientSideData;
     }
+    
     if (remoteGraphData && remoteGraphData.network && remoteGraphData.network.nodes) {
       const transformedListings = remoteGraphData.network.nodes.map(node => ({
           id: node.id,
@@ -152,11 +149,13 @@ export default function WorkbenchPage() {
         locations: remoteGraphData.locations
       };
     }
+    
     return null;
   }, [clientSideData, remoteGraphData]);
 
   const isAnalysisView = !!activeData;
-
+  
+  // The rest of your component remains the same...
   const renderWelcomeView = () => (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] p-6">
         <motion.div 
