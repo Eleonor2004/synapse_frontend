@@ -240,9 +240,9 @@ export default function AboutPage() {
   const t = translations[locale as keyof typeof translations] || translations.en;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="pt-20 pb-32 px-4 bg-gradient-to-br from-white via-gray-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900">
+      <section className="pt-20 pb-32 px-4 bg-gradient-to-br from-background via-slate-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-900">
         <div className="container mx-auto text-center">
           <div className="fade-in">
             <h1 className="text-5xl md:text-6xl font-bold mb-6 text-gray-900 dark:text-white">
@@ -256,11 +256,11 @@ export default function AboutPage() {
       </section>
 
       {/* Mission & Vision */}
-      <section className="py-20 px-4">
+      <section className="py-20 px-4 bg-background">
         <div className="container mx-auto">
           <div className="grid md:grid-cols-2 gap-12 mb-20">
-            <Card className="p-8">
-              <div className="w-16 h-16 gradient-bg rounded-2xl flex items-center justify-center mb-6">
+            <Card className="p-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
                 <Target className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">
@@ -271,8 +271,8 @@ export default function AboutPage() {
               </p>
             </Card>
 
-            <Card className="p-8">
-              <div className="w-16 h-16 gradient-bg rounded-2xl flex items-center justify-center mb-6">
+            <Card className="p-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg">
                 <Award className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">
@@ -298,12 +298,21 @@ export default function AboutPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {t.values.items.map((value, index) => {
               const IconComponent = iconMap[value.icon as keyof typeof iconMap];
+              const gradientColors = [
+                'from-blue-500 to-cyan-500',
+                'from-green-500 to-emerald-500',
+                'from-purple-500 to-violet-500',
+                'from-pink-500 to-rose-500',
+                'from-orange-500 to-yellow-500',
+                'from-teal-500 to-blue-500'
+              ];
+              
               return (
                 <Card 
                   key={index} 
-                  className="p-8 text-center hover:scale-105 transition-all duration-300"
+                  className="p-8 text-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
                 >
-                  <div className="w-16 h-16 gradient-bg rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <div className={`w-16 h-16 bg-gradient-to-r ${gradientColors[index % gradientColors.length]} rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg`}>
                     <IconComponent className="w-8 h-8 text-white" />
                   </div>
                   <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
@@ -320,7 +329,7 @@ export default function AboutPage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 px-4">
+      <section className="py-20 px-4 bg-background">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900 dark:text-white">
@@ -332,9 +341,9 @@ export default function AboutPage() {
             {t.stats.items.map((stat, index) => (
               <Card 
                 key={index} 
-                className="p-6 text-center hover:scale-105 transition-all duration-300"
+                className="p-6 text-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
               >
-                <div className="text-3xl md:text-4xl font-bold gradient-text mb-2">
+                <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
                   {stat.number}
                 </div>
                 <div className="text-gray-600 dark:text-gray-400 font-medium text-sm">
@@ -362,13 +371,13 @@ export default function AboutPage() {
             {t.team.members.map((member, index) => (
               <Card 
                 key={index} 
-                className="p-8 text-center hover:scale-105 transition-all duration-300"
+                className="p-8 text-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
               >
                 <div className="text-6xl mb-4">{member.image}</div>
                 <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">
                   {member.name}
                 </h3>
-                <Badge variant="primary" className="mb-4">
+                <Badge variant="primary" className="mb-4 bg-gradient-to-r from-purple-500 to-blue-500 text-white border-none">
                   {member.role}
                 </Badge>
                 <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
@@ -381,7 +390,7 @@ export default function AboutPage() {
       </section>
 
       {/* Timeline Section */}
-      <section className="py-20 px-4">
+      <section className="py-20 px-4 bg-background">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900 dark:text-white">
@@ -391,7 +400,7 @@ export default function AboutPage() {
 
           <div className="relative">
             {/* Timeline line */}
-            <div className="absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-[#1e0546] to-[#8e43ff]" />
+            <div className="absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-purple-500 to-blue-500" />
             
             <div className="space-y-12">
               {t.timeline.events.map((event, index) => (
@@ -402,12 +411,12 @@ export default function AboutPage() {
                   }`}
                 >
                   <Card 
-                    className={`w-full max-w-md p-6 ${
+                    className={`w-full max-w-md p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl ${
                       index % 2 === 0 ? 'mr-8' : 'ml-8'
                     } hover:scale-105 transition-all duration-300`}
                   >
                     <div className="flex items-center mb-4">
-                      <Badge variant="primary" size="lg" className="mr-4">
+                      <Badge variant="primary" size="lg" className="mr-4 bg-gradient-to-r from-purple-500 to-blue-500 text-white border-none">
                         {event.year}
                       </Badge>
                       <h3 className="text-xl font-bold text-gray-900 dark:text-white">
@@ -420,7 +429,7 @@ export default function AboutPage() {
                   </Card>
                   
                   {/* Timeline dot */}
-                  <div className="absolute left-1/2 transform -translate-x-1/2 w-4 h-4 bg-[#8e43ff] rounded-full border-4 border-white dark:border-gray-900 shadow-brand" />
+                  <div className="absolute left-1/2 transform -translate-x-1/2 w-4 h-4 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full border-4 border-white dark:border-gray-900 shadow-lg" />
                 </div>
               ))}
             </div>
