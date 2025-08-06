@@ -375,11 +375,11 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
     await new Promise(resolve => setTimeout(resolve, 100));
 
     try {
-      const isDarkMode = document.documentElement.classList.contains('dark');
+      //const isDarkMode = document.documentElement.classList.contains('dark');
       const canvas = await html2canvas(exportRef.current, {
         useCORS: true,
         scale: 2,
-        backgroundColor: isDarkMode ? '#111827' : '#f8fafc',
+        backgroundColor: '#f8fafc',
       });
       const imgData = canvas.toDataURL('image/png');
 
@@ -470,7 +470,7 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
                   <motion.g key={node.id} onClick={(e) => handleNodeClick(node, e)} onMouseEnter={() => setHoveredNodeId(node.id)} onMouseLeave={() => setHoveredNodeId(null)} initial={{ x: dimensions.width / 2, y: dimensions.height / 2, scale: 0 }} animate={{ x: node.x || dimensions.width / 2, y: node.y || dimensions.height / 2, scale: isSelected ? 1.2 : isHovered ? 1.1 : 1, opacity: isDimmed ? 0.3 : 1 }} transition={{ type: 'spring', stiffness: 400, damping: 25 }} className="cursor-pointer">
                     {isSelected && (<circle r={node.size / 2 + 6} fill="none" stroke="#fbbf24" strokeWidth="2" opacity="0.8" />)}
                     <circle r={node.size / 2} fill={node.color} stroke="white" strokeWidth="2" className="drop-shadow-md" />
-                    {isHovered && (<text textAnchor="middle" y={node.size / 2 + 20} fontSize="11px" fill={isDarkMode ? 'white' : 'black'} stroke="rgba(255,255,255,0.3)" strokeWidth="3" paintOrder="stroke" className="font-medium">{node.phoneNumber}</text>)}
+                    {isHovered && (<text textAnchor="middle" y={node.size / 2 + 20} fontSize="11px" fill='white' stroke="rgba(255,255,255,0.3)" strokeWidth="3" paintOrder="stroke" className="font-medium">{node.phoneNumber}</text>)}
                   </motion.g>
                 );
               })}

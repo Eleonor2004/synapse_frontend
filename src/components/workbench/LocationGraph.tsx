@@ -89,6 +89,50 @@ const parseDuration = (durationStr: string | null): { seconds: number; isSMS: bo
   return { seconds: 0, isSMS: false };
 };
 
+// Enhanced date parsing function to handle DD/MM/YYYY format
+const parseDate = (dateStr: string): Date | null => {
+  if (!dateStr || typeof dateStr !== 'string') return null;
+  
+  const trimmed = dateStr.trim();
+  
+  // Try DD/MM/YYYY HH:mm:ss format first (your data format)
+  const ddmmyyyyMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s*(\d{1,2}):(\d{1,2}):(\d{1,2})$/);
+  if (ddmmyyyyMatch) {
+    const [, day, month, year, hour, minute, second] = ddmmyyyyMatch;
+    const date = new Date(
+      parseInt(year, 10),
+      parseInt(month, 10) - 1, // Month is 0-indexed
+      parseInt(day, 10),
+      parseInt(hour, 10),
+      parseInt(minute, 10),
+      parseInt(second, 10)
+    );
+    if (!isNaN(date.getTime())) return date;
+  }
+  
+  // Try DD/MM/YYYY format without time
+  const ddmmyyyyOnlyMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (ddmmyyyyOnlyMatch) {
+    const [, day, month, year] = ddmmyyyyOnlyMatch;
+    const date = new Date(
+      parseInt(year, 10),
+      parseInt(month, 10) - 1,
+      parseInt(day, 10)
+    );
+    if (!isNaN(date.getTime())) return date;
+  }
+  
+  // Fall back to standard date parsing
+  try {
+    const date = new Date(trimmed);
+    if (!isNaN(date.getTime())) return date;
+  } catch (error) {
+    // Ignore parsing errors
+  }
+  
+  return null;
+};
+
 // Enhanced coordinate parsing function
 const parseCoordinates = (locationString: string): { latitude: number; longitude: number } | null => {
   if (!locationString || typeof locationString !== 'string') return null;
@@ -186,7 +230,7 @@ export const LocationGraph: React.FC<LocationGraphProps> = ({ data, filters, onI
     const possibleLocationFields = [
       'location', 'caller_location', 'source_location', 
       'localisation', 'localisation numéro appelant', 'localisation numero appelant',
-      'Localisation numéro appelant', 'Localisation numero appelant', 'Localisation'
+      'Localisation numéro appelant', 'Localisation numero appelant', 'Localisation', 'Localisation numéro appelant (Longitude, Latitude)'
     ];
     
     const possibleDateFields = [
@@ -240,21 +284,10 @@ export const LocationGraph: React.FC<LocationGraphProps> = ({ data, filters, onI
       const { isSMS } = parseDuration(durationStr);
       const interactionType = isSMS ? 'sms' : 'call';
       
-      // Enhanced date parsing
-      let date: Date;
-      try {
-        date = new Date(dateStr);
-        if (isNaN(date.getTime())) {
-          // Try alternative date formats
-          const parsedDate = Date.parse(dateStr);
-          if (isNaN(parsedDate)) {
-            console.log(`Skipping item ${index}: invalid date "${dateStr}"`);
-            return;
-          }
-          date = new Date(parsedDate);
-        }
-      } catch (error) {
-        console.log(`Skipping item ${index}: date parsing error for "${dateStr}"`);
+      // Use enhanced date parsing
+      const date = parseDate(dateStr);
+      if (!date) {
+        if (index < 10) console.log(`Skipping item ${index}: invalid date "${dateStr}"`);
         return;
       }
 
