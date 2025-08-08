@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,7 +12,7 @@ import { FilterPanel } from "../../../components/workbench/FilterPanel";
 import { IndividualInfo } from "../../../components/workbench/IndividualInfo";
 import { AuthGuard } from "../../../components/auth/AuthGuard";
 import { useNotifications, NotificationContainer } from "../../../components/ui/Notification";
-import { LayoutGrid, Map, List, Eye, Loader2, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen } from "lucide-react";
+import { LayoutGrid, Map, List, Eye, Loader2, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen, AlertTriangle } from "lucide-react";
 import { getMyListingSets, importListingsFile, getGraphDataForSets } from "../../../services/workbenchService";
 import { GraphResponse, ListingSet, LocationPoint } from "../../../types/api";
 
@@ -71,6 +71,7 @@ export default function WorkbenchPage() {
   const [activeView, setActiveView] = useState<"network" | "location">("network");
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(true);
   const [isIndividualPanelOpen, setIsIndividualPanelOpen] = useState(true);
+  const [authError, setAuthError] = useState<boolean>(false);
   
   const [filters, setFilters] = useState<Filters>({
     interactionType: "all",
@@ -82,18 +83,41 @@ export default function WorkbenchPage() {
   // Check if we are on the client-side
   const isClient = typeof window !== 'undefined';
 
-  const { data: listingSets, isLoading: isLoadingSets } = useQuery({
+  // Helper function to handle auth errors
+  const handleAuthError = (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      setAuthError(true);
+      addNotification("error", "Authentication Failed", "Please log in again to continue.");
+      // Optionally redirect to login page
+      // window.location.href = '/login';
+    }
+  };
+
+  const { data: listingSets, isLoading: isLoadingSets, error: listingSetsError } = useQuery({
     queryKey: ['listingSets'],
     queryFn: getMyListingSets,
-    // FIX: Only enable this query when running in the browser.
     enabled: isClient,
+    retry: (failureCount, error) => {
+      // Don't retry on auth errors
+      if (error instanceof AxiosError && error.response?.status === 401) {
+        handleAuthError(error);
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
   
-  const { data: remoteGraphData, isLoading: isLoadingGraph } = useQuery({
+  const { data: remoteGraphData, isLoading: isLoadingGraph, error: graphError } = useQuery({
     queryKey: ['graphData', selectedListingSet?.id],
     queryFn: (): Promise<GraphResponse> => getGraphDataForSets([selectedListingSet!.id]),
-    // FIX: Only enable this query if a set is selected AND we are in the browser.
     enabled: !!selectedListingSet && isClient,
+    retry: (failureCount, error) => {
+      if (error instanceof AxiosError && error.response?.status === 401) {
+        handleAuthError(error);
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 
   const uploadMutation = useMutation({
@@ -103,9 +127,23 @@ export default function WorkbenchPage() {
       queryClient.invalidateQueries({ queryKey: ['listingSets'] });
     },
     onError: (error: AxiosError<{ detail: string }>) => {
-      addNotification("error", "Save Failed", error.response?.data?.detail || "Could not save the analysis to the server.");
+      if (error.response?.status === 401) {
+        handleAuthError(error);
+      } else {
+        addNotification("error", "Save Failed", error.response?.data?.detail || "Could not save the analysis to the server.");
+      }
     },
   });
+
+  // Effect to show auth error notification
+  useEffect(() => {
+    if (listingSetsError instanceof AxiosError && listingSetsError.response?.status === 401) {
+      handleAuthError(listingSetsError);
+    }
+    if (graphError instanceof AxiosError && graphError.response?.status === 401) {
+      handleAuthError(graphError);
+    }
+  }, [listingSetsError, graphError]);
 
   const handleFileUpload = (parsedData: ExcelData, analysisName: string) => {
     if (!analysisName || !parsedData.listings) return;
@@ -115,6 +153,7 @@ export default function WorkbenchPage() {
     setSelectedListingSet(null);
     setSelectedIndividual(null);
     setActiveView('network');
+    setAuthError(false); // Reset auth error on successful action
 
     uploadMutation.mutate({ name: analysisName, listings: parsedData.listings as Record<string, unknown>[] });
   };
@@ -124,12 +163,14 @@ export default function WorkbenchPage() {
     setClientSideData(null); 
     setSelectedIndividual(null);
     setActiveView('network');
+    setAuthError(false); // Reset auth error on new action
   };
   
   const handleBackToUpload = () => {
     setSelectedListingSet(null);
     setClientSideData(null);
     setSelectedIndividual(null);
+    setAuthError(false);
   }
   
   const activeData: ExcelData | null = useMemo(() => {
@@ -154,8 +195,36 @@ export default function WorkbenchPage() {
   }, [clientSideData, remoteGraphData]);
 
   const isAnalysisView = !!activeData;
+
+  // Show auth error state
+  if (authError) {
+    return (
+      <AuthGuard>
+        <div className="min-h-screen bg-background text-foreground">
+          <NotificationContainer notifications={notifications} removeNotification={removeNotification} />
+          <header className="h-[60px] border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50 flex items-center px-6">
+              <h1 className="text-xl font-bold">Analysis Workbench</h1>
+          </header>
+          <main>
+            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] p-6">
+              <div className="text-center max-w-md">
+                <AlertTriangle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold mb-2">Authentication Required</h2>
+                <p className="text-muted-foreground mb-6">Your session has expired or you're not properly authenticated. Please log in again to continue.</p>
+                <button 
+                  onClick={() => window.location.href = '/en/login'} // Adjust URL as needed
+                  className="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+                >
+                  Go to Login
+                </button>
+              </div>
+            </div>
+          </main>
+        </div>
+      </AuthGuard>
+    );
+  }
   
-  // The rest of your component remains the same...
   const renderWelcomeView = () => (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] p-6">
         <motion.div 

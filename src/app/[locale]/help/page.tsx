@@ -6,6 +6,9 @@ import { useState } from "react";
 import { Card } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { FAQAccordion } from "../../../components/help/FAQAccordion";
+// In your landing page or home page
+import {VideoShowcase} from "../../../components/ui/VideoShowCase";
+
 import { 
   MessageCircle, 
   Video, 
@@ -170,6 +173,9 @@ export default function HelpPage() {
             </p>
           </div>
         </div>
+      </section>
+      <section className="py-16 sm:py-24">
+        <VideoShowcase videoSrc="/video_synapse.mp4" />
       </section>
 
       {/* FAQ Section */}

@@ -4,7 +4,7 @@
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Network, Users, Zap, Search, Phone, MessageSquare, MapPin, Smartphone, X } from 'lucide-react';
+import { Network, Users, Zap, Search, Phone, MapPin, Smartphone, X } from 'lucide-react';
 import { ExcelData, Individual } from '@/app/[locale]/workbench/page';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';

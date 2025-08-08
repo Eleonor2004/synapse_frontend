@@ -3,6 +3,7 @@ import { HeroSection } from '../../components/home/HeroSection';
 import { FeatureList } from '../../components/home/FeatureList';
 import { NewsletterSection } from '../../components/home/NewsletterSection';
 import { Footer } from '../../components/layout/Footer';
+import { VideoShowcase } from '../../components/ui/VideoShowCase';
 
 export default function HomePage() {
   return (
@@ -12,6 +13,9 @@ export default function HomePage() {
       <main className="flex-grow relative">
         {/* Hero Section */}
         <HeroSection />
+        <section className="py-16 sm:py-24">
+          <VideoShowcase videoSrc="/video_synapse.mp4" />
+         </section>
         
         {/* Feature List Section */}
         <FeatureList />
