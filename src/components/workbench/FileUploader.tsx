@@ -4,11 +4,11 @@
 
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
-import { Upload, X, CheckCircle, AlertTriangle, ArrowRight, Edit3 } from "lucide-react";
+import { Upload, X, CheckCircle, AlertTriangle, ArrowRight, Edit3, FileText, Archive } from "lucide-react";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
 import { motion, AnimatePresence } from "framer-motion";
-import { ExcelData } from "@/app/[locale]/workbench/page"; 
+import { ExcelData } from "@/app/[locale]/workbench/page";
 
 interface FileUploaderProps {
   onUpload: (data: ExcelData, name: string) => void;
@@ -17,6 +17,7 @@ interface FileUploaderProps {
 
 const REQUIRED_SHEETS = ["Abonné", "Listing", "Fréquence par cellule", "Fréquence Correspondant", "Fréquence par Durée appel", "Fréquence par IMEI", "Identification des abonnés"];
 const SHEET_ALTERNATIVES: { [key: string]: string[] } = {
+  // ... (This section remains unchanged)
   "Abonné": ["Abonne", "Abonnés", "Abonnes", "Subscribers", "Subscriber"],
   "Listing": ["Listings", "Communications", "Calls", "Call_List"],
   "Fréquence par cellule": ["Frequence par cellule", "Cell Frequency", "Cellule"],
@@ -29,10 +30,12 @@ const SHEET_ALTERNATIVES: { [key: string]: string[] } = {
 interface ValidationResult {
   isValid: boolean;
   missingSheets: string[];
+  failedFiles: string[];
 }
 
-// FIX: Moved helper functions outside the component so they are not recreated on every render.
+// FIX: Helper functions are kept outside the component
 const findSheetMatch = (sheetNames: string[], requiredSheet: string): string | null => {
+  // ... (This function remains unchanged)
   const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
   const normalizedRequired = normalize(requiredSheet);
   
@@ -47,7 +50,8 @@ const findSheetMatch = (sheetNames: string[], requiredSheet: string): string | n
   return null;
 };
 
-const validateAndParseWorkbook = (workbook: XLSX.WorkBook): { data: ExcelData | null, validation: ValidationResult } => {
+const validateAndParseWorkbook = (workbook: XLSX.WorkBook): { data: ExcelData | null, validation: Omit<ValidationResult, 'failedFiles'> } => {
+  // ... (This function's core logic remains unchanged, but simplified its return type)
   const sheetNames = workbook.SheetNames;
   const missingSheets: string[] = [];
   const alternativeSheets: { [key: string]: string } = {};
@@ -63,7 +67,7 @@ const validateAndParseWorkbook = (workbook: XLSX.WorkBook): { data: ExcelData | 
       }
   }
 
-  const validation: ValidationResult = { isValid: missingSheets.length === 0, missingSheets };
+  const validation = { isValid: missingSheets.length === 0, missingSheets };
   if (!validation.isValid) {
       return { data: null, validation };
   }
@@ -85,59 +89,112 @@ const validateAndParseWorkbook = (workbook: XLSX.WorkBook): { data: ExcelData | 
   return { data, validation };
 };
 
+// NEW: Helper to get all workbooks from a single file (could be a ZIP)
+const getWorkbooksFromFile = async (file: File): Promise<{name: string; workbook: XLSX.WorkBook}[]> => {
+    const buffer = await file.arrayBuffer();
+
+    if (file.name.toLowerCase().endsWith('.zip')) {
+        const zip = await JSZip.loadAsync(buffer);
+        const excelFilePromises: Promise<{name: string; workbook: XLSX.WorkBook}>[] = [];
+
+        zip.forEach((relativePath, zipEntry) => {
+            if (!zipEntry.dir && (zipEntry.name.endsWith('.xlsx') || zipEntry.name.endsWith('.xls'))) {
+                const promise = zipEntry.async('arraybuffer').then(excelBuffer => {
+                    const workbook = XLSX.read(excelBuffer, { type: "array", cellDates: true });
+                    return { name: zipEntry.name, workbook };
+                });
+                excelFilePromises.push(promise);
+            }
+        });
+        
+        const results = await Promise.all(excelFilePromises);
+        if (results.length === 0) {
+            throw new Error(`No Excel files (.xlsx, .xls) found in the ZIP archive: ${file.name}`);
+        }
+        return results;
+    } else {
+        const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
+        return [{ name: file.name, workbook }];
+    }
+};
+
+
 export function FileUploader({ onUpload, onError }: FileUploaderProps) {
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  // MODIFIED: State to handle multiple files
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [parsedData, setParsedData] = useState<ExcelData | null>(null);
   const [analysisName, setAnalysisName] = useState("");
 
   const resetState = useCallback(() => {
-    setUploadedFile(null);
+    // MODIFIED: Reset multiple files state
+    setUploadedFiles([]);
     setValidationResult(null);
     setParsedData(null);
     setAnalysisName("");
     setIsProcessing(false);
   }, []);
   
-  const processFile = useCallback(async (file: File) => {
+  // NEW: Processes an array of files, replacing processFile
+  const processFiles = useCallback(async (files: File[]) => {
     setIsProcessing(true);
     setValidationResult(null);
     setParsedData(null);
-    setAnalysisName(`Analysis - ${file.name.split('.')[0]}`);
+    setAnalysisName(`Analysis - ${new Date().toLocaleString()}`);
+
+    // This will hold the concatenated data from all valid files
+    const combinedData: ExcelData = { subscribers: [], listings: [] };
+    const allMissingSheets = new Set<string>();
+    const failedFiles = new Set<string>();
 
     try {
-      const buffer = await file.arrayBuffer();
-      let workbook: XLSX.WorkBook;
+      // Process each dropped file
+      for (const file of files) {
+          try {
+              const workbooksWithNames = await getWorkbooksFromFile(file);
 
-      if (file.name.toLowerCase().endsWith('.zip')) {
-        const zip = await JSZip.loadAsync(buffer);
-        const excelFile = Object.values(zip.files).find(f => !f.dir && (f.name.endsWith('.xlsx') || f.name.endsWith('.xls')));
-        if (!excelFile) {
-            throw new Error("No Excel file found in the ZIP archive.");
-        }
-        const excelBuffer = await excelFile.async('arraybuffer');
-        workbook = XLSX.read(excelBuffer, { type: "array", cellDates: true });
-      } else {
-        workbook = XLSX.read(buffer, { type: "array", cellDates: true });
+              // Process each Excel workbook found (multiple in a ZIP)
+              for (const { name: workbookName, workbook } of workbooksWithNames) {
+                  const { data, validation } = validateAndParseWorkbook(workbook);
+                  if (validation.isValid && data) {
+                      // Concatenate data from the valid workbook
+                      if(data.subscribers) {
+                        combinedData.subscribers = [...(combinedData.subscribers || []), ...data.subscribers];
+                      }
+                      if(data.listings) {
+                        combinedData.listings = [...(combinedData.listings || []), ...data.listings];
+                      }
+                  } else {
+                      // If any workbook is invalid, track the errors
+                      failedFiles.add(file.name === workbookName ? file.name : `${file.name} -> ${workbookName}`);
+                      validation.missingSheets.forEach(sheet => allMissingSheets.add(sheet));
+                  }
+              }
+          } catch (e) {
+              const errorMessage = e instanceof Error ? e.message : `An error occurred with ${file.name}`;
+              failedFiles.add(`${file.name} (Processing Error)`);
+              allMissingSheets.add(errorMessage);
+          }
       }
 
-      // Now calls the function defined outside the component
-      const { data, validation } = validateAndParseWorkbook(workbook);
-      setValidationResult(validation);
+      const finalValidation: ValidationResult = {
+          isValid: failedFiles.size === 0,
+          missingSheets: Array.from(allMissingSheets),
+          failedFiles: Array.from(failedFiles),
+      };
 
-      if (validation.isValid && data) {
-        setParsedData(data);
+      setValidationResult(finalValidation);
+
+      if (finalValidation.isValid) {
+        setParsedData(combinedData);
       } else {
-        onError(`File is missing required sheets: ${validation.missingSheets.join(', ')}`);
-        resetState();
+        onError(`One or more files failed validation. Missing sheets or errors: ${finalValidation.missingSheets.join(', ')}`);
+        setParsedData(null); // Ensure no analysis can be started
       }
     } catch (e: unknown) {
-      if (e instanceof Error) {
-          onError(e.message);
-      } else {
-          onError("An unknown error occurred during file processing.");
-      }
+      const message = e instanceof Error ? e.message : "An unknown error occurred during file processing.";
+      onError(message);
       resetState();
     } finally {
       setIsProcessing(false);
@@ -145,11 +202,11 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
   }, [onError, resetState]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file) return;
-    setUploadedFile(file);
-    processFile(file);
-  }, [processFile]);
+    // MODIFIED: Handle array of files
+    if (acceptedFiles.length === 0) return;
+    setUploadedFiles(acceptedFiles);
+    processFiles(acceptedFiles);
+  }, [processFiles]);
   
   const handleStartAnalysis = () => {
     if (parsedData && analysisName.trim()) {
@@ -164,7 +221,8 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
       'application/vnd.ms-excel': ['.xls'],
       'application/zip': ['.zip']
     },
-    multiple: false,
+    // MODIFIED: Allow multiple files
+    multiple: true,
     maxSize: 100 * 1024 * 1024,
   });
 
@@ -185,8 +243,9 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
                     <Upload className="w-8 h-8" />
                 </div>
                 <div>
-                    <h3 className="text-lg font-semibold">{isProcessing ? "Processing..." : isDragActive ? "Drop the file here" : "Upload Your Data"}</h3>
-                    <p className="text-muted-foreground">Drag & drop or click to select a .xlsx, .xls, or .zip file</p>
+                    <h3 className="text-lg font-semibold">{isProcessing ? "Processing Files..." : isDragActive ? "Drop the files here" : "Upload Your Data"}</h3>
+                    {/* MODIFIED: Updated prompt text */}
+                    <p className="text-muted-foreground">Drag & drop or click to select .xlsx, .xls, or .zip files</p>
                 </div>
             </div>
          </motion.div>
@@ -202,8 +261,16 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
           >
              <div className="flex items-start justify-between">
                 <div>
-                    <p className="font-semibold text-foreground">{uploadedFile?.name}</p>
-                    <p className="text-sm text-muted-foreground">Validation status:</p>
+                    {/* MODIFIED: Display list of uploaded files */}
+                    <p className="font-semibold text-foreground">Uploaded Files:</p>
+                    <ul className="text-sm text-muted-foreground list-disc pl-5">
+                      {uploadedFiles.map(file => (
+                        <li key={file.name} className="flex items-center gap-2">
+                          {file.name.endsWith('.zip') ? <Archive className="w-3 h-3"/> : <FileText className="w-3 h-3"/>}
+                          {file.name}
+                        </li>
+                      ))}
+                    </ul>
                 </div>
                 <button onClick={resetState} className="p-2 rounded-md hover:bg-muted"><X className="w-4 h-4" /></button>
             </div>
@@ -211,19 +278,25 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
             {validationResult.isValid ? (
                 <div className="flex items-center gap-3 p-3 rounded-md bg-green-500/10 text-green-700 border border-green-500/20">
                     <CheckCircle className="w-5 h-5" />
-                    <p className="font-medium">File validation successful! All required sheets are present.</p>
+                    <p className="font-medium">All files validated successfully! Data has been combined.</p>
                 </div>
             ) : (
                 <div className="flex items-start gap-3 p-3 rounded-md bg-red-500/10 text-red-700 border border-red-500/20">
                     <AlertTriangle className="w-5 h-5 mt-1 flex-shrink-0" />
                     <div>
                         <p className="font-medium">Validation Failed</p>
-                        <p className="text-sm">The following required sheets are missing: <span className="font-semibold">{validationResult.missingSheets.join(', ')}</span></p>
+                        {/* MODIFIED: Improved error reporting */}
+                        <p className="text-sm">The following issues were found:</p>
+                        <ul className="list-disc pl-5 mt-1 text-xs">
+                          {validationResult.failedFiles.length > 0 && <li><strong>Failed Files:</strong> {validationResult.failedFiles.join(', ')}</li>}
+                          {validationResult.missingSheets.length > 0 && <li><strong>Missing Sheets/Errors:</strong> {validationResult.missingSheets.join(', ')}</li>}
+                        </ul>
                     </div>
                 </div>
             )}
             
-            {parsedData && (
+            {/* This part only shows on overall success */}
+            {parsedData && validationResult?.isValid && (
                 <motion.div 
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -238,7 +311,7 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
                         type="text"
                         value={analysisName}
                         onChange={(e) => setAnalysisName(e.target.value)}
-                        placeholder="e.g., Case File 101"
+                        placeholder="e.g., Q3 Multi-Case Analysis"
                         className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                     <button 
