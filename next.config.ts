@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
     source: '/',
     destination: '/en',
     permanent: true,
-    },
+    }
     ]
   },
 };

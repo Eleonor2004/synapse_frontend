@@ -602,9 +602,9 @@ const Modern404Page = () => {
 
           {/* Quick Links */}
           <div className="quick-links">
-            <a href="/en/workbench" className="quick-link">
+            <a href="/en/login" className="quick-link">
               <MapPin className="link-icon" />
-              <span>Sitemap</span>
+              <span>Workbench</span>
             </a>
             <a href="/en/help" className="quick-link">Help Center</a>
             <a href="/en/about" className="quick-link">About Us</a>
