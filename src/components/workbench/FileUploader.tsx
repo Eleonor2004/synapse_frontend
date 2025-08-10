@@ -4,7 +4,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
-import { Upload, X, CheckCircle, AlertTriangle, ArrowRight, Edit3, FileText, Archive, PlusCircle, ChevronDown, ChevronRight, Check, XCircle } from "lucide-react";
+import { Upload, X, CheckCircle, AlertTriangle, ArrowRight, Edit3, FileText, Archive, PlusCircle, ChevronDown, ChevronRight, Check, XCircle, Loader2 } from "lucide-react";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,21 +15,25 @@ interface FileUploaderProps {
   onError: (error: string) => void;
 }
 
-// Represents the detailed status of a single processed workbook
 interface FileStatus {
-  id: string; // Unique ID for mapping
+  id: string; 
   fileName: string;
   status: 'success' | 'failure';
   sheetsFound: string[];
   sheetsMissing: string[];
-  error?: string; // For file-level errors (e.g., failed to read zip)
+  error?: string;
 }
 
 const REQUIRED_SHEETS = ["Abonné", "Listing", "Fréquence par cellule", "Fréquence Correspondant", "Fréquence par Durée appel", "Fréquence par IMEI", "Identification des abonnés"];
-// ... SHEET_ALTERNATIVES remains unchanged
-
-// Helper functions (validateAndParseWorkbook, findSheetMatch) are unchanged
-// For brevity, they are assumed to be here as in the previous version.
+const SHEET_ALTERNATIVES: { [key: string]: string[] } = {
+  "Abonné": ["Abonne", "Abonnés", "Abonnes", "Subscribers", "Subscriber"],
+  "Listing": ["Listings", "Communications", "Calls", "Call_List"],
+  "Fréquence par cellule": ["Frequence par cellule", "Cell Frequency", "Cellule"],
+  "Fréquence Correspondant": ["Frequence Correspondant", "Correspondent Frequency"],
+  "Fréquence par Durée appel": ["Frequence par Duree appel", "Call Duration Frequency"],
+  "Fréquence par IMEI": ["Frequence par IMEI", "IMEI Frequency"],
+  "Identification des abonnés": ["Identification des abonnes", "Subscriber Identification"],
+};
 
 const findSheetMatch = (sheetNames: string[], requiredSheet: string): string | null => {
     const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -105,10 +109,10 @@ const StatusItem: React.FC<{ status: FileStatus }> = ({ status }) => {
     const isSuccess = status.status === 'success';
     return (
         <div className={`text-sm rounded-md border ${isSuccess ? 'border-green-500/30 bg-green-500/10' : 'border-red-500/30 bg-red-500/10'}`}>
-            <button onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center justify-between p-2 text-left">
-                <div className="flex items-center gap-2">
-                    {isSuccess ? <Check className="w-4 h-4 text-green-600"/> : <XCircle className="w-4 h-4 text-red-600"/>}
-                    <span className="font-medium text-foreground">{status.fileName}</span>
+            <button onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }} className="w-full flex items-center justify-between p-2 text-left">
+                <div className="flex items-center gap-2 min-w-0">
+                    {isSuccess ? <Check className="w-4 h-4 text-green-600 flex-shrink-0"/> : <XCircle className="w-4 h-4 text-red-600 flex-shrink-0"/>}
+                    <span className="font-medium text-foreground truncate">{status.fileName}</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${isSuccess ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
@@ -156,52 +160,59 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
     setIsProcessing(false);
   }, []);
 
-  const processFiles = useCallback(async (files: File[]) => {
-    if (files.length === 0) return;
+  const processAllFiles = useCallback(async () => {
+    if (uploadedFiles.length === 0) return;
     setIsProcessing(true);
 
     const combinedData: ExcelData = { subscribers: [], listings: [] };
     const newStatuses: FileStatus[] = [];
 
-    for (const file of files) {
+    await Promise.all(uploadedFiles.map(async (file) => {
         try {
             const workbooks = await getWorkbooksFromFile(file);
             for (const { name, workbook, allSheetNames } of workbooks) {
                 const { data, missingSheets } = validateAndParseWorkbook(workbook);
                 if (data) {
-                    newStatuses.push({ id: name, fileName: name, status: 'success', sheetsFound: allSheetNames, sheetsMissing: [] });
-                    if (data.subscribers) combinedData.subscribers = [...(combinedData.subscribers || []), ...data.subscribers];
-                    if (data.listings) combinedData.listings = [...(combinedData.listings || []), ...data.listings];
+                    newStatuses.push({ id: `${file.name}-${name}`, fileName: name, status: 'success', sheetsFound: allSheetNames, sheetsMissing: [] });
+                    if (data.subscribers) combinedData.subscribers.push(...data.subscribers);
+                    if (data.listings) combinedData.listings.push(...data.listings);
                 } else {
-                    newStatuses.push({ id: name, fileName: name, status: 'failure', sheetsFound: allSheetNames, sheetsMissing });
+                    newStatuses.push({ id: `${file.name}-${name}`, fileName: name, status: 'failure', sheetsFound: allSheetNames, sheetsMissing });
                 }
             }
         } catch (e) {
             const error = e instanceof Error ? e.message : "An unknown error occurred.";
             newStatuses.push({ id: file.name, fileName: file.name, status: 'failure', sheetsFound: [], sheetsMissing: [], error });
         }
-    }
+    }));
 
+    newStatuses.sort((a, b) => a.fileName.localeCompare(b.fileName));
     setFileStatuses(newStatuses);
-    if ((combinedData.listings?.length || 0) > 0) {
+
+    if (combinedData.listings && combinedData.listings.length > 0) {
         setParsedData(combinedData);
         if (!analysisName) setAnalysisName(`Analysis - ${new Date().toLocaleString()}`);
     } else {
         setParsedData(null);
-        onError("No valid data could be extracted from the uploaded files. Please check the file structures.");
+        if(uploadedFiles.length > 0) {
+           onError("No valid data could be extracted. Please check the file structures detailed below.");
+        }
     }
 
     setIsProcessing(false);
-  }, [analysisName, onError]);
+  }, [uploadedFiles, analysisName, onError]);
 
   useEffect(() => {
-      processFiles(uploadedFiles);
-  }, [uploadedFiles, processFiles]);
+      processAllFiles();
+  }, [uploadedFiles]); // Removed processAllFiles from dependency array to prevent potential re-renders
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
-    // Append new files to the existing list
-    setUploadedFiles(prevFiles => [...prevFiles, ...acceptedFiles]);
+    setUploadedFiles(prevFiles => {
+        const existingFileNames = new Set(prevFiles.map(f => f.name));
+        const newUniqueFiles = acceptedFiles.filter(f => !existingFileNames.has(f.name));
+        return [...prevFiles, ...newUniqueFiles];
+    });
   }, []);
   
   const handleStartAnalysis = () => {
@@ -218,7 +229,6 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
       'application/zip': ['.zip']
     },
     multiple: true,
-    noClick: uploadedFiles.length > 0, // Disable click if files are already staged
     noKeyboard: true,
   });
 
@@ -236,10 +246,11 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
   );
 
   const renderStagingView = () => (
-    <div className="bg-muted/50 border border-border rounded-lg p-4 space-y-4">
+    <div {...getRootProps()} className="bg-muted/50 border border-border rounded-lg p-4 space-y-4 cursor-default">
+        <input {...getInputProps()} />
         <div className="flex items-start justify-between">
             <h3 className="text-lg font-semibold">Analysis Staging Area</h3>
-            <button onClick={resetState} className="p-2 rounded-md hover:bg-muted"><X className="w-4 h-4" /></button>
+            <button onClick={(e) => { e.stopPropagation(); resetState(); }} className="p-2 rounded-md hover:bg-muted"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="space-y-2 max-h-60 overflow-y-auto p-1">
@@ -247,7 +258,7 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
         </div>
 
         <div className="flex items-center gap-4 pt-4 border-t border-border">
-            <button onClick={open} className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-md border border-dashed bg-background hover:border-primary hover:text-primary transition-colors">
+            <button onClick={(e) => { e.stopPropagation(); open(); }} className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm rounded-md border border-dashed bg-background hover:border-primary hover:text-primary transition-colors cursor-pointer">
                 <PlusCircle className="w-4 h-4" /> Add More Files
             </button>
         </div>
@@ -255,9 +266,10 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
         {parsedData && (
              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="space-y-3 pt-4 border-t border-border">
                 <label className="block text-sm font-medium text-foreground"><Edit3 className="w-4 h-4 inline mr-2" /> Name this Analysis</label>
-                <input type="text" value={analysisName} onChange={(e) => setAnalysisName(e.target.value)} placeholder="e.g., Multi-Case Analysis" className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"/>
-                <button onClick={handleStartAnalysis} disabled={!analysisName.trim() || isProcessing} className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed">
-                   {isProcessing ? 'Processing...' : 'Start Analysis'} <ArrowRight className="w-4 h-4" />
+                <input type="text" onClick={e => e.stopPropagation()} value={analysisName} onChange={(e) => setAnalysisName(e.target.value)} placeholder="e.g., Multi-Case Analysis" className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"/>
+                <button onClick={(e) => { e.stopPropagation(); handleStartAnalysis(); }} disabled={!analysisName.trim() || isProcessing} className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed">
+                   {/* FIXED: Added closing </> tag to the fragment */}
+                   {isProcessing ? <><Loader2 className="w-4 h-4 animate-spin mr-2"/> Processing...</> : <>Start Analysis <ArrowRight className="w-4 h-4" /></>}
                 </button>
             </motion.div>
         )}
@@ -268,8 +280,8 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
     <div className="space-y-4">
         <AnimatePresence mode="wait">
             <motion.div key={uploadedFiles.length > 0 ? 'staging' : 'welcome'} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                {isProcessing && uploadedFiles.length === 0 ? (
-                    <div className="flex justify-center items-center h-48"><Loader2 className="w-8 h-8 animate-spin text-primary"/></div>
+                {isProcessing && fileStatuses.length === 0 ? (
+                    <div className="flex justify-center items-center h-48 border-2 border-dashed rounded-xl"><Loader2 className="w-8 h-8 animate-spin text-primary"/></div>
                 ) : uploadedFiles.length > 0 ? (
                     renderStagingView()
                 ) : (
