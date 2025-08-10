@@ -4,38 +4,50 @@
 
 import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  User, 
-  Phone, 
-  MessageSquare, 
-  Clock, 
-  Calendar, 
-  Activity,
-  TrendingUp,
-  Smartphone,
-  Users,
-  BarChart3,
-  AlertTriangle
-} from "lucide-react";
+import { User, Phone, MessageSquare, Clock, Users, BarChart3, AlertTriangle, Smartphone, TrendingUp, Activity, Zap, Calendar } from "lucide-react";
 import { ExcelData, Individual } from "@/app/[locale]/workbench/page";
 
-// Define a type for a single interaction record to avoid 'any'
-interface InteractionRecord {
-  [key: string]: string | number | undefined | null;
-  "Numéro A"?: string;
-  caller?: string;
-  source?: string;
-  "Numéro B"?: string;
-  called?: string;
-  target?: string;
-  Type?: string;
-  Durée?: string;
-  duration?: string;
-  Heure?: string;
-  time?: string;
-  Date?: string;
-  timestamp?: string;
-}
+// Helper functions needed for data parsing
+const findFieldValue = (row: Record<string, unknown>, fields: string[]): string | null => {
+  if (!row || typeof row !== 'object') return null;
+  const normalize = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
+  const normalizedRow: { [key: string]: unknown } = {};
+  Object.keys(row).forEach(key => {
+    if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== '') {
+      normalizedRow[normalize(key)] = row[key];
+    }
+  });
+  for (const field of fields) {
+    const normalizedField = normalize(field);
+    if (normalizedRow[normalizedField]) {
+      return String(normalizedRow[normalizedField]);
+    }
+  }
+  return null;
+};
+
+const isSMSData = (value: string): boolean => {
+  if (!value || typeof value !== 'string') return false;
+  const upperValue = value.toUpperCase();
+  return upperValue.includes('SMS') || /^[A-F0-9]{6,}$/i.test(value.trim());
+};
+
+const parseDuration = (durationStr: string | null): { seconds: number; isSMS: boolean } => {
+  if (!durationStr || typeof durationStr !== 'string') return { seconds: 0, isSMS: false };
+  const trimmed = durationStr.trim();
+  if (isSMSData(trimmed)) return { seconds: 0, isSMS: true };
+  const timeMatch = trimmed.match(/(\d+):(\d+)(?::(\d+))?/);
+  if (timeMatch) {
+    const h = timeMatch[3] ? parseInt(timeMatch[1], 10) || 0 : 0;
+    const m = timeMatch[3] ? parseInt(timeMatch[2], 10) : parseInt(timeMatch[1], 10) || 0;
+    const s = timeMatch[3] ? parseInt(timeMatch[3], 10) : parseInt(timeMatch[2], 10) || 0;
+    return { seconds: (h * 3600) + (m * 60) + s, isSMS: false };
+  }
+  const numMatch = trimmed.match(/(\d+)/);
+  if (numMatch) return { seconds: parseInt(numMatch[1], 10) || 0, isSMS: false };
+  return { seconds: 0, isSMS: false };
+};
+
 
 interface InteractionStats {
   totalInteractions: number;
@@ -44,365 +56,202 @@ interface InteractionStats {
   smsOut: number;
   smsIn: number;
   uniqueContacts: number;
-  avgCallDuration: number;
-  mostFrequentContact: string;
+  avgCallDurationSec: number;
+  mostFrequentContact: { number: string; count: number } | null;
   timePattern: { [hour: string]: number };
-  recentActivity: InteractionRecord[];
-  suspiciousPatterns: string[];
+  detectedPatterns: string[];
+  recentActivity: Record<string, any>[];
 }
 
-export function IndividualInfo({ individual, data }: IndividualInfoProps) {
+export function IndividualInfo({ individual, data }: { individual: Individual | null, data: ExcelData }) {
+
   const stats: InteractionStats | null = useMemo(() => {
     if (!individual || !data.listings) return null;
 
     const phoneNumber = individual.phoneNumber;
-    // Cast listings to the new type
-    const interactions = (data.listings as InteractionRecord[]).filter(listing => 
-      String(listing["Numéro A"] || listing.caller || listing.source) === phoneNumber ||
-      String(listing["Numéro B"] || listing.called || listing.target) === phoneNumber
+    const callerFields = ['caller_num', 'caller', 'calling_number', 'from_number'];
+    const calleeFields = ['callee_num', 'callee', 'called_number', 'to_number'];
+    const durationFields = ['duration', 'duree appel'];
+    const dateFields = ['timestamp', 'date', 'date début appel'];
+
+    const interactions = data.listings.filter(row => 
+        findFieldValue(row, callerFields) === phoneNumber || 
+        findFieldValue(row, calleeFields) === phoneNumber
     );
 
     const contacts = new Set<string>();
     const contactFrequency: { [contact: string]: number } = {};
-    const timePattern: { [hour: string]: number } = {};
+    const timePattern: { [hour: string]: number } = Object.fromEntries(Array.from({ length: 24 }, (_, i) => [i.toString().padStart(2, '0'), 0]));
     let totalCallDuration = 0;
     let callCount = 0;
+    let nightCalls = 0;
     let callsOut = 0, callsIn = 0, smsOut = 0, smsIn = 0;
 
-    for (let i = 0; i < 24; i++) {
-      timePattern[i.toString().padStart(2, '0')] = 0;
-    }
-
-    interactions.forEach((interaction) => {
-      const isOutgoing = String(interaction["Numéro A"] || interaction.caller || interaction.source) === phoneNumber;
-      const contact = isOutgoing 
-        ? String(interaction["Numéro B"] || interaction.called || interaction.target)
-        : String(interaction["Numéro A"] || interaction.caller || interaction.source);
-      
-      const type = String(interaction.Type || 'appel').toLowerCase();
-      const duration = parseFloat(String(interaction.Durée || interaction.duration || 0));
+    interactions.forEach((row) => {
+      const isOutgoing = findFieldValue(row, callerFields) === phoneNumber;
+      const contact = (isOutgoing ? findFieldValue(row, calleeFields) : findFieldValue(row, callerFields)) || "Unknown";
       
       contacts.add(contact);
       contactFrequency[contact] = (contactFrequency[contact] || 0) + 1;
 
-      if (type.includes('sms')) {
+      const durationStr = findFieldValue(row, durationFields);
+      const { seconds, isSMS } = parseDuration(durationStr);
+
+      if (isSMS) {
         if (isOutgoing) smsOut++; else smsIn++;
       } else {
         if (isOutgoing) callsOut++; else callsIn++;
-        if (duration > 0) {
-          totalCallDuration += duration;
+        if (seconds > 0) {
+          totalCallDuration += seconds;
           callCount++;
         }
       }
 
-      const timeStr = String(interaction.Heure || interaction.time || interaction.Date);
-      if (timeStr) {
+      const dateStr = findFieldValue(row, dateFields);
+      if (dateStr) {
         try {
-            const date = new Date(timeStr);
+            const date = new Date(dateStr);
             if(!isNaN(date.getTime())) {
-                const hour = date.getHours().toString().padStart(2, '0');
-                if(timePattern[hour] !== undefined) {
-                    timePattern[hour]++;
-                }
+                const hour = date.getHours();
+                timePattern[hour.toString().padStart(2, '0')]++;
+                if (hour < 6 || hour > 22) nightCalls++;
             }
-        } catch(e) {
-            // Ignore invalid date strings
-        }
+        } catch(e) {}
       }
     });
     
-    const mostFrequentContact = Object.keys(contactFrequency).reduce((a, b) => 
-      contactFrequency[a] > contactFrequency[b] ? a : b, ''
-    );
+    const mostFreq = Object.entries(contactFrequency).sort((a, b) => b[1] - a[1])[0];
 
     const suspiciousPatterns: string[] = [];
-    if (interactions.length > 100) suspiciousPatterns.push("High activity volume");
-    if (contacts.size > 50) suspiciousPatterns.push("Large contact network");
-    if (callsOut > callsIn * 3) suspiciousPatterns.push("Unusual outgoing call pattern");
+    if (interactions.length > 200) suspiciousPatterns.push("Very high interaction volume");
+    if (nightCalls > interactions.length / 4 && nightCalls > 10) suspiciousPatterns.push("Significant night-time activity");
+    if (callsOut > callsIn * 3 && callsOut > 10) suspiciousPatterns.push("Primarily makes outgoing calls");
     
-    const timestamps = interactions
-      .map(i => new Date(String(i.Date || i.timestamp)).getTime())
-      .filter(t => !isNaN(t))
-      .sort();
-
-    let burstCount = 0;
-    for (let i = 1; i < timestamps.length; i++) {
-      if (timestamps[i] - timestamps[i-1] < 300000) { // 5 minutes
-        burstCount++;
-      }
-    }
-    if (burstCount > 10) suspiciousPatterns.push("Burst communication pattern");
-
     const recentActivity = interactions
-      .sort((a, b) => new Date(String(b.Date || b.timestamp)).getTime() - new Date(String(a.Date || a.timestamp)).getTime())
+      .map(row => ({ ...row, _timestamp: new Date(findFieldValue(row, dateFields) || 0).getTime()}))
+      .sort((a, b) => b._timestamp - a._timestamp)
       .slice(0, 10);
 
     return {
       totalInteractions: interactions.length,
-      callsOut,
-      callsIn,
-      smsOut,
-      smsIn,
+      callsOut, callsIn, smsOut, smsIn,
       uniqueContacts: contacts.size,
-      avgCallDuration: callCount > 0 ? totalCallDuration / callCount : 0,
-      mostFrequentContact,
+      avgCallDurationSec: callCount > 0 ? totalCallDuration / callCount : 0,
+      mostFrequentContact: mostFreq ? { number: mostFreq[0], count: mostFreq[1] } : null,
       timePattern,
-      recentActivity,
-      suspiciousPatterns
+      detectedPatterns: suspiciousPatterns,
+      recentActivity
     };
   }, [individual, data]);
 
-  if (!individual) {
+  if (!individual || !stats) {
     return (
-      <div className="h-full bg-card border border-border rounded-lg shadow-sm flex items-center justify-center">
-        <div className="text-center p-6">
-          <User className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-foreground mb-2">No Individual Selected</h3>
-          <p className="text-sm text-muted-foreground">
-            Click on a node in the network graph to view detailed information
-          </p>
-        </div>
+      <div className="h-full bg-card border border-border rounded-lg flex items-center justify-center p-6 text-center">
+          <div>
+            <User className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+            <h3 className="text-lg font-medium">No Individual Selected</h3>
+            <p className="text-sm text-muted-foreground">Click a node in the graph to see its profile.</p>
+          </div>
       </div>
     );
   }
 
-  const getActivityColor = (value: number, max: number) => {
-    if (max === 0) return "bg-muted";
-    const intensity = value / max;
-    if (intensity === 0) return "bg-muted";
-    if (intensity <= 0.25) return "bg-green-200 dark:bg-green-900";
-    if (intensity <= 0.5) return "bg-yellow-200 dark:bg-yellow-900";
-    if (intensity <= 0.75) return "bg-orange-200 dark:bg-orange-900";
-    return "bg-red-200 dark:bg-red-900";
-  };
-
   const formatDuration = (seconds: number) => {
     if (seconds < 60) return `${Math.round(seconds)}s`;
     if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
-    return `${Math.round(seconds / 3600)}h`;
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.round((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
   };
 
-  const maxTimeActivity = Math.max(...Object.values(stats?.timePattern || {0:0}));
+  const getActivityColor = (value: number, max: number) => {
+    if (max === 0 || value === 0) return "bg-muted/50";
+    const intensity = value / max;
+    if (intensity <= 0.25) return "bg-green-300";
+    if (intensity <= 0.5) return "bg-yellow-300";
+    if (intensity <= 0.75) return "bg-orange-300";
+    return "bg-red-400";
+  };
+
+  const maxTimeActivity = Math.max(...Object.values(stats.timePattern), 1);
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={individual.id}
-        initial={{ opacity: 0, x: 300 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: 300 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="h-full bg-card border border-border rounded-lg shadow-sm overflow-hidden flex flex-col"
-      >
-        <div className="p-4 border-b border-border bg-gradient-to-r from-primary/5 to-secondary/5">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary text-white">
-              <User className="w-5 h-5" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-foreground">Individual Profile</h3>
-              <p className="text-sm text-muted-foreground font-mono">
-                {individual.phoneNumber}
-              </p>
-            </div>
-          </div>
+    <AnimatePresence>
+      <motion.div key={individual.id} className="h-full bg-card border border-border rounded-lg flex flex-col">
+        <div className="p-4 border-b border-border">
+          <h3 className="text-lg font-semibold">{individual.phoneNumber}</h3>
+          <p className="text-sm text-muted-foreground">Analytical Profile</p>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
-          <div className="p-4 space-y-6">
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: "Total Interactions", value: stats?.totalInteractions || 0, icon: Activity, color: "text-primary" },
-                { label: "Unique Contacts", value: stats?.uniqueContacts || 0, icon: Users, color: "text-secondary" },
-                { label: "Avg Call Duration", value: formatDuration(stats?.avgCallDuration || 0), icon: Clock, color: "text-green-600" },
-                { label: "Activity Score", value: Math.min(100, Math.round((stats?.totalInteractions || 0) / 10)), icon: TrendingUp, color: "text-orange-600" }
-              ].map((stat, index) => (
-                <motion.div
-                  key={stat.label}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="bg-muted/30 rounded-lg p-3 border border-border/50"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <stat.icon className={`w-4 h-4 ${stat.color}`} />
-                    <span className="text-xs font-medium text-muted-foreground">{stat.label}</span>
-                  </div>
-                  <p className="text-lg font-bold text-foreground">{stat.value}</p>
-                </motion.div>
-              ))}
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="font-semibold text-foreground flex items-center gap-2">
-                <BarChart3 className="w-4 h-4" />
-                Communication Breakdown
-              </h4>
-              <div className="space-y-2">
-                {[
-                  { label: "Outgoing Calls", value: stats?.callsOut || 0, icon: Phone, color: "bg-blue-500" },
-                  { label: "Incoming Calls", value: stats?.callsIn || 0, icon: Phone, color: "bg-blue-300" },
-                  { label: "Outgoing SMS", value: stats?.smsOut || 0, icon: MessageSquare, color: "bg-green-500" },
-                  { label: "Incoming SMS", value: stats?.smsIn || 0, icon: MessageSquare, color: "bg-green-300" }
-                ].map((item, index) => {
-                  const total = (stats?.totalInteractions || 1);
-                  const percentage = total > 0 ? (item.value / total) * 100 : 0;
-                  
-                  return (
-                    <motion.div
-                      key={item.label}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="flex items-center gap-3 p-2 rounded-md bg-muted/20"
-                    >
-                      <item.icon className="w-4 h-4 text-muted-foreground" />
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-sm font-medium text-foreground">{item.label}</span>
-                          <span className="text-sm text-muted-foreground">{item.value}</span>
-                        </div>
-                        <div className="w-full bg-muted rounded-full h-2">
-                          <motion.div
-                            className={`h-2 rounded-full ${item.color}`}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${percentage}%` }}
-                            transition={{ delay: index * 0.1 + 0.3, duration: 0.5 }}
-                          />
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="font-semibold text-foreground flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                Activity Pattern (24h)
-              </h4>
-              <div className="grid grid-cols-12 gap-1">
-                {Object.entries(stats?.timePattern || {}).map(([hour, count]) => (
-                  <div
-                    key={hour}
-                    className={`
-                      aspect-square rounded-sm flex items-center justify-center text-xs font-medium
-                      ${getActivityColor(count, maxTimeActivity)}
-                      ${count > 0 ? "text-foreground" : "text-muted-foreground"}
-                    `}
-                    title={`${hour}:00 - ${count} interactions`}
-                  >
-                    {hour}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {stats?.mostFrequentContact && (
-              <div className="space-y-3">
-                <h4 className="font-semibold text-foreground flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  Top Contact
-                </h4>
-                <div className="bg-secondary/5 border border-secondary/20 rounded-lg p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-secondary text-white">
-                      <User className="w-4 h-4" />
+        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { label: "Total Interactions", value: stats.totalInteractions, icon: Zap },
+              { label: "Unique Contacts", value: stats.uniqueContacts, icon: Users },
+              { label: "Avg. Call", value: formatDuration(stats.avgCallDurationSec), icon: Clock },
+              { label: "Activity Score", value: Math.min(100, stats.totalInteractions), icon: TrendingUp }
+            ].map((stat) => (
+                <div key={stat.label} className="bg-muted p-3 rounded-lg border border-border/50">
+                    <div className="flex items-center gap-2 mb-1 text-muted-foreground">
+                        <stat.icon className="w-4 h-4" />
+                        <span className="text-xs font-medium">{stat.label}</span>
                     </div>
-                    <div>
-                      <p className="font-mono text-sm font-medium text-foreground">
-                        {stats.mostFrequentContact}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Most frequent contact</p>
-                    </div>
-                  </div>
+                    <p className="text-xl font-bold text-foreground">{stat.value}</p>
                 </div>
-              </div>
-            )}
-
-            {stats?.suspiciousPatterns && stats.suspiciousPatterns.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="font-semibold text-foreground flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-orange-500" />
-                  Detected Patterns
-                </h4>
-                <div className="space-y-2">
-                  {stats.suspiciousPatterns.map((pattern, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="flex items-center gap-2 p-2 rounded-md bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800"
-                    >
-                      <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />
-                      <span className="text-sm text-orange-700 dark:text-orange-300">{pattern}</span>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-3">
-              <h4 className="font-semibold text-foreground flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                Recent Activity
-              </h4>
-              <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
-                {stats?.recentActivity.map((activity, index) => {
-                  const isOutgoing = String(activity["Numéro A"] || activity.caller || activity.source) === individual.phoneNumber;
-                  const contact = isOutgoing 
-                    ? String(activity["Numéro B"] || activity.called || activity.target)
-                    : String(activity["Numéro A"] || activity.caller || activity.source);
-                  const type = String(activity.Type || 'appel').toLowerCase();
-                  const date = new Date(String(activity.Date || activity.timestamp));
-                  
-                  return (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="flex items-center gap-3 p-2 rounded-md bg-muted/20 text-sm"
-                    >
-                      <div className={`p-1 rounded-full ${isOutgoing ? 'bg-blue-100 dark:bg-blue-900' : 'bg-green-100 dark:bg-green-900'}`}>
-                        {type.includes('sms') ? (
-                          <MessageSquare className="w-3 h-3 text-blue-600" />
-                        ) : (
-                          <Phone className="w-3 h-3 text-green-600" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-center">
-                          <span className="font-mono text-xs text-foreground">{contact}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {isOutgoing ? '→' : '←'} {type.toUpperCase()}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {!isNaN(date.getTime()) ? `${date.toLocaleDateString()} ${date.toLocaleTimeString()}` : 'Invalid date'}
-                        </p>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {individual.imei && (
-              <div className="space-y-3">
-                <h4 className="font-semibold text-foreground flex items-center gap-2">
-                  <Smartphone className="w-4 h-4" />
-                  Device Information
-                </h4>
-                <div className="bg-muted/30 rounded-lg p-3">
-                  <p className="text-sm text-muted-foreground">IMEI</p>
-                  <p className="font-mono text-sm font-medium text-foreground">{individual.imei}</p>
-                </div>
-              </div>
-            )}
+            ))}
           </div>
+          
+          <div>
+            <h4 className="font-semibold mb-2 text-sm"><BarChart3 className="w-4 h-4 inline mr-2" />Communication Breakdown</h4>
+            <div className="space-y-2">
+                {[
+                  { label: "Outgoing Calls", value: stats.callsOut, color: "bg-blue-500" },
+                  { label: "Incoming Calls", value: stats.callsIn, color: "bg-sky-400" },
+                  { label: "Outgoing SMS", value: stats.smsOut, color: "bg-green-500" },
+                  { label: "Incoming SMS", value: stats.smsIn, color: "bg-emerald-400" }
+                ].map(item => {
+                    const percentage = stats.totalInteractions > 0 ? (item.value / stats.totalInteractions) * 100 : 0;
+                    return (
+                        <div key={item.label} className="text-xs">
+                            <div className="flex justify-between mb-1">
+                                <span>{item.label}</span>
+                                <span className="font-semibold">{item.value}</span>
+                            </div>
+                            <div className="w-full bg-muted rounded-full h-2">
+                                <div className={`h-2 rounded-full ${item.color}`} style={{ width: `${percentage}%` }}/>
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+          </div>
+          
+          <div>
+            <h4 className="font-semibold mb-2 text-sm"><Clock className="w-4 h-4 inline mr-2" />Activity Pattern (24h)</h4>
+            <div className="grid grid-cols-12 gap-1">
+                {Object.entries(stats.timePattern).map(([hour, count]) => (
+                    <div key={hour} title={`${hour}:00 - ${count} interactions`} 
+                         className={`h-6 rounded-sm flex items-center justify-center text-[10px] font-mono ${getActivityColor(count, maxTimeActivity)}`}
+                    >
+                      {hour}
+                    </div>
+                ))}
+            </div>
+          </div>
+          
+          {stats.detectedPatterns.length > 0 && (
+            <div>
+              <h4 className="font-semibold text-orange-500 mb-2 text-sm"><AlertTriangle className="w-4 h-4 inline mr-2" />Detected Patterns</h4>
+               <div className="space-y-2">
+                 {stats.detectedPatterns.map(pattern => ( 
+                   <div key={pattern} className="flex items-start gap-2 text-xs bg-orange-500/10 p-2 rounded-md">
+                       <AlertTriangle className="w-3 h-3 mt-0.5 text-orange-500 flex-shrink-0" />
+                       <span className="text-orange-600">{pattern}</span>
+                   </div> 
+                 ))}
+               </div>
+            </div>
+          )}
         </div>
       </motion.div>
     </AnimatePresence>

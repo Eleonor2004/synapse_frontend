@@ -8,7 +8,8 @@ import { AxiosError } from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from 'next/dynamic';
 
-import { FilterPanel } from "../../../components/workbench/FilterPanel";
+// FIXED: Import the new, correct filter type `WorkbenchFilters`
+import { FilterPanel, WorkbenchFilters } from "../../../components/workbench/FilterPanel";
 import { IndividualInfo } from "../../../components/workbench/IndividualInfo";
 import { AuthGuard } from "../../../components/auth/AuthGuard";
 import { useNotifications, NotificationContainer } from "../../../components/ui/Notification";
@@ -54,12 +55,8 @@ export interface Individual {
   details: IndividualDetails;
 }
 
-interface Filters {
-  interactionType: "all" | "calls" | "sms";
-  dateRange: { start: string; end: string };
-  individuals: string[];
-  minInteractions: number;
-}
+// REMOVED: The old local `Filters` interface is no longer needed.
+// We now import `WorkbenchFilters` from the FilterPanel component.
 
 export default function WorkbenchPage() {
   const { addNotification, notifications, removeNotification } = useNotifications();
@@ -73,11 +70,14 @@ export default function WorkbenchPage() {
   const [isIndividualPanelOpen, setIsIndividualPanelOpen] = useState(true);
   const [authError, setAuthError] = useState<boolean>(false);
   
-  const [filters, setFilters] = useState<Filters>({
+  // FIXED: Initialize the state with the full WorkbenchFilters structure
+  const [filters, setFilters] = useState<WorkbenchFilters>({
     interactionType: "all",
     dateRange: { start: "", end: "" },
     individuals: [],
-    minInteractions: 0
+    minInteractions: 0,
+    contactWhitelist: [], // Added with default value
+    durationRange: { min: 0, max: 3600 }, // Added with default value
   });
 
   // Check if we are on the client-side
@@ -88,8 +88,6 @@ export default function WorkbenchPage() {
     if (error.response?.status === 401) {
       setAuthError(true);
       addNotification("error", "Authentication Failed", "Please log in again to continue.");
-      // Optionally redirect to login page
-      // window.location.href = '/login';
     }
   };
 
@@ -98,7 +96,6 @@ export default function WorkbenchPage() {
     queryFn: getMyListingSets,
     enabled: isClient,
     retry: (failureCount, error) => {
-      // Don't retry on auth errors
       if (error instanceof AxiosError && error.response?.status === 401) {
         handleAuthError(error);
         return false;
@@ -143,7 +140,7 @@ export default function WorkbenchPage() {
     if (graphError instanceof AxiosError && graphError.response?.status === 401) {
       handleAuthError(graphError);
     }
-  }, [listingSetsError, graphError]);
+  }, [listingSetsError, graphError, handleAuthError]);
 
   const handleFileUpload = (parsedData: ExcelData, analysisName: string) => {
     if (!analysisName || !parsedData.listings) return;
@@ -341,6 +338,9 @@ export default function WorkbenchPage() {
     <AuthGuard>
       <div className="min-h-screen bg-background text-foreground">
         <NotificationContainer notifications={notifications} removeNotification={removeNotification} />
+        <header className="h-[60px] border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50 flex items-center px-6">
+            <h1 className="text-xl font-bold">Analysis Workbench</h1>
+        </header>
         <main>
            <AnimatePresence mode="wait">
               <motion.div key={isAnalysisView ? 'analysis' : 'welcome'} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} >

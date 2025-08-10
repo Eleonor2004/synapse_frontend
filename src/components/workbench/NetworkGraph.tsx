@@ -509,4 +509,3 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
     </div>
   );
 };
-
