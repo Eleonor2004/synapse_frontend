@@ -667,8 +667,7 @@ const generateExportSVG = (bounds: any, padding: number, graphWidth: number, gra
         cy="${nodeY}"
         r="${node.size / 2}"
         fill="url(#${gradientId})"
-        stroke="white"
-        stroke-width="3"
+        
       />
       
       <!-- Node label -->
@@ -1252,8 +1251,7 @@ const exportAsPDF = async (svgString: string, width: number, height: number) => 
                           <circle
                             r="10"
                             fill="#ef4444"
-                            stroke="white"
-                            strokeWidth="2"
+                            
                           />
                           <text
                             textAnchor="middle"

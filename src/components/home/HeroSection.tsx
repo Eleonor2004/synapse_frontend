@@ -6,12 +6,223 @@ import { AnimatedShinyButton } from '../ui/AnimatedShinyButton';
 import { ArrowRight, Sparkles, Zap, Network } from 'lucide-react';
 import { useRef, useEffect, useState } from 'react';
 
+// Enhanced Graph Network Component
+const AnimatedGraphNetwork = () => {
+  const [nodes, setNodes] = useState<Array<{ 
+    id: number; 
+    x: number; 
+    y: number; 
+    size: number; 
+    delay: number;
+    connections: number[];
+  }>>([]);
+
+  const [edges, setEdges] = useState<Array<{
+    id: number;
+    from: number;
+    to: number;
+    delay: number;
+  }>>([]);
+
+  useEffect(() => {
+    // Generate nodes in a more organic distribution
+    const newNodes = Array.from({ length: 25 }, (_, i) => ({
+      id: i,
+      x: 15 + Math.random() * 70, // Keep away from edges
+      y: 20 + Math.random() * 60,
+      size: 4 + Math.random() * 6, // Bigger nodes (4-10px)
+      delay: Math.random() * 3,
+      connections: [],
+    }));
+
+    // Create connections between nearby nodes
+    const newEdges: Array<{id: number; from: number; to: number; delay: number}> = [];
+    let edgeId = 0;
+
+    newNodes.forEach((node, i) => {
+      const nearbyNodes = newNodes.filter((otherNode, j) => {
+        if (i === j) return false;
+        const distance = Math.sqrt(
+          Math.pow(node.x - otherNode.x, 2) + 
+          Math.pow(node.y - otherNode.y, 2)
+        );
+        return distance < 25 && Math.random() > 0.6; // 40% connection chance for nearby nodes
+      });
+
+      nearbyNodes.slice(0, 2).forEach((nearbyNode) => {
+        if (!newEdges.find(edge => 
+          (edge.from === i && edge.to === nearbyNode.id) ||
+          (edge.from === nearbyNode.id && edge.to === i)
+        )) {
+          newEdges.push({
+            id: edgeId++,
+            from: i,
+            to: nearbyNode.id,
+            delay: Math.random() * 2,
+          });
+          newNodes[i].connections.push(nearbyNode.id);
+        }
+      });
+    });
+
+    setNodes(newNodes);
+    setEdges(newEdges);
+  }, []);
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* SVG for crisp lines */}
+      <svg className="absolute inset-0 w-full h-full">
+        <defs>
+          <linearGradient id="edgeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0" />
+            <stop offset="50%" stopColor="hsl(var(--primary))" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        
+        {/* Render edges */}
+        {edges.map((edge) => {
+          const fromNode = nodes[edge.from];
+          const toNode = nodes[edge.to];
+          
+          if (!fromNode || !toNode) return null;
+
+          return (
+            <motion.line
+              key={edge.id}
+              x1={`${fromNode.x}%`}
+              y1={`${fromNode.y}%`}
+              x2={`${toNode.x}%`}
+              y2={`${toNode.y}%`}
+              stroke="url(#edgeGradient)"
+              strokeWidth="2.5"
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ 
+                pathLength: [0, 1, 0.7], 
+                opacity: [0, 0.6, 0.3],
+              }}
+              transition={{
+                duration: 4,
+                delay: edge.delay,
+                repeat: Infinity,
+                repeatDelay: 1.5,
+                ease: "easeInOut",
+              }}
+            />
+          );
+        })}
+      </svg>
+
+      {/* Render nodes */}
+      {nodes.map((node) => (
+        <motion.div
+          key={node.id}
+          className="absolute rounded-full"
+          style={{
+            left: `${node.x}%`,
+            top: `${node.y}%`,
+            width: `${node.size}px`,
+            height: `${node.size}px`,
+          }}
+          initial={{ 
+            scale: 0, 
+            opacity: 0,
+            background: "hsl(var(--primary) / 0.4)",
+          }}
+          animate={{ 
+            scale: [0, 1.3, 1],
+            opacity: [0, 0.8, 0.5],
+            background: [
+              "hsl(var(--primary) / 0.4)",
+              "hsl(var(--primary) / 0.7)", 
+              "hsl(var(--primary) / 0.5)"
+            ],
+          }}
+          transition={{
+            duration: 2.5,
+            delay: node.delay,
+            repeat: Infinity,
+            repeatDelay: 2,
+            ease: "easeOut",
+          }}
+        >
+          {/* Enhanced pulsing ring effect */}
+          <motion.div
+            className="absolute inset-0 rounded-full border-2 border-primary/40"
+            animate={{
+              scale: [1, 2.8, 1],
+              opacity: [0.6, 0, 0.6],
+            }}
+            transition={{
+              duration: 3.5,
+              delay: node.delay + 0.5,
+              repeat: Infinity,
+              ease: "easeOut",
+            }}
+          />
+          
+          {/* Additional outer ring for larger nodes */}
+          {node.size > 7 && (
+            <motion.div
+              className="absolute inset-0 rounded-full border border-primary/30"
+              animate={{
+                scale: [1, 3.5, 1],
+                opacity: [0.4, 0, 0.4],
+              }}
+              transition={{
+                duration: 4,
+                delay: node.delay + 1.2,
+                repeat: Infinity,
+                ease: "easeOut",
+              }}
+            />
+          )}
+        </motion.div>
+      ))}
+
+      {/* Data flow particles along edges */}
+      {edges.slice(0, 8).map((edge, index) => {
+        const fromNode = nodes[edge.from];
+        const toNode = nodes[edge.to];
+        
+        if (!fromNode || !toNode) return null;
+
+        return (
+          <motion.div
+            key={`particle-${edge.id}`}
+            className="absolute w-3.5 h-1.5 rounded-full bg-primary/80 shadow-lg shadow-primary/20"
+            initial={{
+              x: `${fromNode.x}%`,
+              y: `${fromNode.y}%`,
+              opacity: 0,
+            }}
+            animate={{
+              x: [`${fromNode.x}%`, `${toNode.x}%`],
+              y: [`${fromNode.y}%`, `${toNode.y}%`],
+              opacity: [0, 1, 0],
+              scale: [0.3, 1.2, 0.3],
+            }}
+            transition={{
+              duration: 2.2,
+              delay: index * 0.25 + 1,
+              repeat: Infinity,
+              repeatDelay: 3,
+              ease: "easeInOut",
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+};
+
 // Floating particles component - optimized for both themes
 const FloatingParticles = () => {
   const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; delay: number }>>([]);
   
   useEffect(() => {
-    const newParticles = Array.from({ length: 15 }, (_, i) => ({
+    const newParticles = Array.from({ length: 12 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
@@ -25,18 +236,18 @@ const FloatingParticles = () => {
       {particles.map((particle) => (
         <motion.div
           key={particle.id}
-          className="absolute w-1 h-1 bg-primary/40 rounded-full shadow-sm"
+          className="absolute w-0.5 h-0.5 bg-primary/30 rounded-full"
           style={{
             left: `${particle.x}%`,
             top: `${particle.y}%`,
           }}
           animate={{
             y: [-20, -100],
-            opacity: [0, 0.8, 0],
+            opacity: [0, 0.6, 0],
             scale: [0.5, 1, 0.5],
           }}
           transition={{
-            duration: 4,
+            duration: 5,
             delay: particle.delay,
             repeat: Infinity,
             ease: "easeOut",
@@ -51,22 +262,32 @@ const FloatingParticles = () => {
 const InteractiveGrid = () => {
   return (
     <div className="absolute inset-0 overflow-hidden">
-      {/* Grid pattern that adapts to theme */}
-      <div className="bg-grid-pattern absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black_60%,transparent_100%)]" />
+      {/* Subtle grid pattern */}
+      <div 
+        className="absolute inset-0 opacity-[0.02] dark:opacity-[0.05]"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(var(--primary-rgb) / 0.1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(var(--primary-rgb) / 0.1) 1px, transparent 1px)
+          `,
+          backgroundSize: '40px 40px',
+          maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 80%)',
+        }}
+      />
       
-      {/* Animated gradient overlay - different for light/dark */}
+      {/* Animated gradient overlay */}
       <motion.div
         className="absolute inset-0"
         animate={{
           background: [
-            "radial-gradient(circle at 0% 0%, rgba(142, 67, 255, 0.08) 0%, transparent 50%)",
-            "radial-gradient(circle at 100% 100%, rgba(30, 5, 70, 0.08) 0%, transparent 50%)",
-            "radial-gradient(circle at 0% 100%, rgba(142, 67, 255, 0.06) 0%, transparent 50%)",
-            "radial-gradient(circle at 100% 0%, rgba(30, 5, 70, 0.06) 0%, transparent 50%)",
+            "radial-gradient(circle at 0% 0%, rgba(142, 67, 255, 0.03) 0%, transparent 50%)",
+            "radial-gradient(circle at 100% 100%, rgba(30, 5, 70, 0.03) 0%, transparent 50%)",
+            "radial-gradient(circle at 0% 100%, rgba(142, 67, 255, 0.02) 0%, transparent 50%)",
+            "radial-gradient(circle at 100% 0%, rgba(30, 5, 70, 0.02) 0%, transparent 50%)",
           ],
         }}
         transition={{
-          duration: 8,
+          duration: 12,
           repeat: Infinity,
           ease: "linear",
         }}
@@ -144,7 +365,7 @@ export const HeroSection = () => {
     offset: ["start start", "end start"],
   });
 
-  const y = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
+  const y = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
   return (
@@ -154,14 +375,19 @@ export const HeroSection = () => {
     >
       {/* Background Elements - Theme Aware */}
       <InteractiveGrid />
+      
+      {/* Animated Graph Network - Main Feature */}
+      <motion.div style={{ y: useTransform(scrollYProgress, [0, 1], ["0%", "20%"]) }}>
+        <AnimatedGraphNetwork />
+      </motion.div>
+      
       <FloatingParticles />
       
-      {/* Parallax Background Shapes - Optimized for both themes */}
+      {/* Parallax Background Shapes - More subtle */}
       <motion.div style={{ y }} className="absolute inset-0">
-        {/* Light theme: subtle colored backgrounds, Dark theme: more vibrant */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/[0.03] dark:bg-primary/[0.08] rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-primary-dark/[0.02] dark:bg-primary-dark/[0.06] rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-primary/[0.015] to-primary-dark/[0.015] dark:from-primary/[0.04] dark:to-primary-dark/[0.04] rounded-full blur-3xl" />
+        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/[0.02] dark:bg-primary/[0.06] rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-primary-dark/[0.015] dark:bg-primary-dark/[0.04] rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-primary/[0.01] to-primary-dark/[0.01] dark:from-primary/[0.03] dark:to-primary-dark/[0.03] rounded-full blur-3xl" />
       </motion.div>
 
       {/* Main Content */}
@@ -174,7 +400,7 @@ export const HeroSection = () => {
       >
         {/* Badge - Enhanced for light theme */}
         <motion.div variants={itemVariants} className="mb-8">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/8 dark:bg-primary/10 border border-primary/15 dark:border-primary/20 text-sm font-medium text-primary glass-morphism shadow-sm">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/8 dark:bg-primary/10 border border-primary/15 dark:border-primary/20 text-sm font-medium text-primary glass-morphism shadow-sm backdrop-blur-sm">
             <Sparkles className="w-4 h-4" />
             <span>Introducing SYNAPSE</span>
             <ArrowRight className="w-4 h-4" />
@@ -193,7 +419,7 @@ export const HeroSection = () => {
             Complex
           </span>
           <span className="block gradient-text">
-            Networks
+            Data
           </span>
         </motion.h1>
 

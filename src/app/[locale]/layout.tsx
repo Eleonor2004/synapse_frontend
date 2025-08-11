@@ -49,7 +49,7 @@ export default async function LocaleLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="description" content="SYNAPSE - Advanced Network Analysis Platform" />
-        <title>SYNAPSE - Visualize Complex Networks</title>
+        <title>SYNAPSE - Visualize Complex Data</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link 
