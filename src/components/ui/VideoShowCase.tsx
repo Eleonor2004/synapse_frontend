@@ -19,14 +19,14 @@ type Translations = {
 // All translations are now self-contained within the component
 const translations: Translations = {
   en: {
-    title: "See Your Data in Action",
+    title: "See Your Data in ",
     subtitle: "Watch how our visualization engine brings complex data relationships to life with stunning clarity and speed.",
     badge_interactive: "Interactive",
     badge_realtime: "Real-Time",
     badge_responsive: "Responsive"
   },
   fr: {
-    title: "Voyez Vos Données en Action",
+    title: "Voyez Vos Données en ",
     subtitle: "Découvrez comment notre moteur de visualisation donne vie aux relations de données complexes avec une clarté et une vitesse époustouflantes.",
     badge_interactive: "Interactif",
     badge_realtime: "Temps Réel",
@@ -127,9 +127,12 @@ export const VideoShowcase = ({
       {/* Themed Header Section */}
       <div className="text-center mb-12">
         
-        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
-          {t.title}
-        </h2>
+        {/* Main heading */}
+          <h2 className="text-4xl md:text-6xl font-black mb-6">
+            <span className="gradient-text">{t.title}</span>
+            <br />
+            <span className="text-foreground">Action</span>
+          </h2>
         <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
           {t.subtitle}
         </p>

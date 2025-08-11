@@ -123,10 +123,10 @@ export function LoginForm() {
             <Zap className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white bg-gradient-to-r from-[#1e0546] to-[#8e43ff] bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground dark:text-white bg-gradient-to-r from-[#1e0546] to-[#8e43ff] bg-clip-text text-transparent">
               {t.title}
             </h1>
-            <p className="mt-3 text-gray-600 dark:text-gray-400 leading-relaxed">
+            <p className="mt-3 text-foreground dark:text-gray-400 leading-relaxed">
               {t.subtitle}
             </p>
           </div>
@@ -140,7 +140,7 @@ export function LoginForm() {
           <div className="space-y-2">
             <label 
               htmlFor="username" 
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              className="block text-sm font-medium text-foreground dark:text-gray-300"
             >
               {t.username}
             </label>
@@ -168,7 +168,7 @@ export function LoginForm() {
           <div className="space-y-2">
             <label 
               htmlFor="password" 
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+              className="block text-sm font-medium text-foreground dark:text-gray-300"
             >
               {t.password}
             </label>
@@ -216,7 +216,7 @@ export function LoginForm() {
               onChange={(e) => setRememberMe(e.target.checked)}
               className="h-4 w-4 text-[#8e43ff] focus:ring-[#8e43ff] border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
             />
-            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+            <label htmlFor="remember-me" className="ml-2 block text-sm text-foreground dark:text-gray-300">
               {t.rememberMe}
             </label>
           </div>
@@ -282,7 +282,7 @@ export function LoginForm() {
           </div>
           <div className="relative flex justify-center text-xs">
             <span className="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">
-              SYNAPSE © 2024
+              SYNAPSE by ANTIC © 2025
             </span>
           </div>
         </div>

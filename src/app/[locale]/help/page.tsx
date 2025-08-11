@@ -185,7 +185,7 @@ export default function HelpPage() {
             <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900 dark:text-white">
               {t.faq.title}
             </h2>
-            <p className="text-xl text-gray-700 dark:text-gray-300 max-w-3xl mx-auto">
+            <p className="text-xl text-foreground dark:text-gray-900 max-w-3xl mx-auto">
               {t.faq.subtitle}
             </p>
           </div>

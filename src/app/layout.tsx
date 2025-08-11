@@ -1,7 +1,7 @@
 // src/app/layout.tsx
 export const metadata = {
   title: 'SYNAPSE by ANTIC',
-  description: 'Your app description',
+  description: 'SYNAPSE by ANTIC',
 }
 
 export default function RootLayout({
