@@ -780,7 +780,7 @@ const exportAsPNG = async (svgString: string, width: number, height: number) => 
           if (blob) {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
-            link.download = `network-graph-${new Date().toISOString().slice(0, 10)}.png`;
+            link.download = `Synapse-graph-${new Date().toISOString().slice(0, 10)}.png`;
             link.href = url;
             document.body.appendChild(link);
             link.click();
@@ -892,7 +892,7 @@ const exportAsPDF = async (svgString: string, width: number, height: number) => 
           // Add header with title and metadata
           pdf.setFontSize(16);
           pdf.setTextColor(40, 40, 40);
-          pdf.text('Network Analysis Graph', 10, 15);
+          pdf.text('Network Analysis Graph with Synapse by ANTIC', 10, 15);
           
           pdf.setFontSize(10);
           pdf.setTextColor(100, 100, 100);
@@ -930,196 +930,7 @@ const exportAsPDF = async (svgString: string, width: number, height: number) => 
     }
   });
 };
-// PNG Export Function
-/*
-const exportAsPNG = async (svgString: string) => {
-  return new Promise<void>((resolve, reject) => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    if (!ctx) {
-      reject(new Error('Could not get canvas context'));
-      return;
-    }
 
-    // Set canvas size with high DPI for better quality
-    const scale = 2; // 2x resolution for crisp images
-    canvas.width = dimensions.width * scale;
-    canvas.height = dimensions.height * scale;
-    
-    // Scale the context to match
-    ctx.scale(scale, scale);
-    
-    // Create blob from SVG string
-    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-    const svgUrl = URL.createObjectURL(svgBlob);
-    
-    const img = new Image();
-    
-    img.onload = () => {
-      try {
-        // Fill background
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, dimensions.width, dimensions.height);
-        
-        // Draw the SVG image
-        ctx.drawImage(img, 0, 0, dimensions.width, dimensions.height);
-        
-        // Convert to blob
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.download = `network-graph-${new Date().toISOString().slice(0, 10)}.png`;
-            link.href = url;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            // Cleanup
-            URL.revokeObjectURL(url);
-            URL.revokeObjectURL(svgUrl);
-            resolve();
-          } else {
-            reject(new Error('Failed to create blob'));
-          }
-        }, 'image/png', 1.0);
-      } catch (error) {
-        URL.revokeObjectURL(svgUrl);
-        reject(error);
-      }
-    };
-    
-    img.onerror = () => {
-      URL.revokeObjectURL(svgUrl);
-      reject(new Error('Failed to load SVG image'));
-    };
-    
-    img.src = svgUrl;
-  });
-};
-*/
-
-// PDF Export Function
-/*
-const exportAsPDF = async (svgString: string) => {
-  return new Promise<void>(async (resolve, reject) => {
-    try {
-      // First convert SVG to PNG
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      if (!ctx) {
-        reject(new Error('Could not get canvas context'));
-        return;
-      }
-
-      // High resolution for PDF
-      const scale = 3;
-      canvas.width = dimensions.width * scale;
-      canvas.height = dimensions.height * scale;
-      ctx.scale(scale, scale);
-      
-      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-      const svgUrl = URL.createObjectURL(svgBlob);
-      
-      const img = new Image();
-      
-      img.onload = async () => {
-        try {
-          // Fill background
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, dimensions.width, dimensions.height);
-          
-          // Draw the SVG
-          ctx.drawImage(img, 0, 0, dimensions.width, dimensions.height);
-          
-          // Convert canvas to data URL
-          const imgData = canvas.toDataURL('image/png', 1.0);
-          
-          // Dynamically import jsPDF
-          const { jsPDF } = await import('jspdf');
-          
-          // Calculate PDF dimensions
-          const imgWidth = dimensions.width;
-          const imgHeight = dimensions.height;
-          const aspectRatio = imgWidth / imgHeight;
-          
-          // A4 dimensions in points (72 DPI)
-          const a4Width = 595.28;
-          const a4Height = 841.89;
-          
-          let pdfWidth, pdfHeight;
-          
-          // Determine orientation and fit to page
-          if (aspectRatio > 1) {
-            // Landscape orientation
-            pdfWidth = a4Height; // Use A4 height as width
-            pdfHeight = a4Width; // Use A4 width as height
-            
-            // Scale to fit
-            if (aspectRatio > (a4Height / a4Width)) {
-              pdfHeight = pdfWidth / aspectRatio;
-            } else {
-              pdfWidth = pdfHeight * aspectRatio;
-            }
-          } else {
-            // Portrait orientation
-            pdfWidth = a4Width;
-            pdfHeight = a4Height;
-            
-            // Scale to fit
-            if (aspectRatio < (a4Width / a4Height)) {
-              pdfWidth = pdfHeight * aspectRatio;
-            } else {
-              pdfHeight = pdfWidth / aspectRatio;
-            }
-          }
-          
-          // Create PDF
-          const pdf = new jsPDF({
-            orientation: aspectRatio > 1 ? 'landscape' : 'portrait',
-            unit: 'pt',
-            format: 'a4'
-          });
-          
-          // Center the image on the page
-          const xOffset = (aspectRatio > 1 ? a4Height : a4Width - pdfWidth) / 2;
-          const yOffset = (aspectRatio > 1 ? a4Width : a4Height - pdfHeight) / 2;
-          
-          pdf.addImage(imgData, 'PNG', xOffset, yOffset, pdfWidth, pdfHeight, '', 'FAST');
-          
-          // Add header with title and timestamp
-          pdf.setFontSize(12);
-          pdf.setTextColor(60, 60, 60);
-          pdf.text('Network Analysis Graph', 40, 30);
-          pdf.setFontSize(8);
-          pdf.text(`Generated: ${new Date().toLocaleString()}`, 40, 45);
-          pdf.text(`Nodes: ${visibleNodes.length} | Edges: ${visibleEdges.length}`, 40, 58);
-          
-          pdf.save(`network-graph-${new Date().toISOString().slice(0, 10)}.pdf`);
-          
-          // Cleanup
-          URL.revokeObjectURL(svgUrl);
-          resolve();
-        } catch (error) {
-          URL.revokeObjectURL(svgUrl);
-          reject(error);
-        }
-      };
-      
-      img.onerror = () => {
-        URL.revokeObjectURL(svgUrl);
-        reject(new Error('Failed to load SVG for PDF export'));
-      };
-      
-      img.src = svgUrl;
-    } catch (error) {
-      reject(error);
-    }
-  });
-};
-*/
   // Control functions
   const resetZoom = useCallback(() => {
     if (!svgRef.current) return;
@@ -1408,7 +1219,7 @@ const exportAsPDF = async (svgString: string) => {
                         style={{ 
                           cursor: 'pointer',
                           transition: 'all 0.3s ease',
-                          transform: isSelected ? 'scale(1.2)' : isHovered ? 'scale(1.1)' : 'scale(1)',
+                          transform: isSelected ? 'scale(1.01)' : isHovered ? 'scale(1)' : 'scale(1)',
                           filter: isSelected || isHovered ? 'url(#shadow)' : 'none'
                         }}
                         onClick={(e) => handleNodeClick(node, e as any)}

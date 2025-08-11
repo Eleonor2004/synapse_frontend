@@ -1,5 +1,3 @@
-// src/components/workbench/FileUploader.tsx
-
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
@@ -10,24 +8,31 @@ import JSZip from "jszip";
 import { motion, AnimatePresence } from "framer-motion";
 import { ExcelData } from "@/app/[locale]/workbench/page";
 
+// --- PROPS AND INTERFACES (MODIFIED) ---
+
 interface FileUploaderProps {
   onUpload: (data: ExcelData, name: string) => void;
   onError: (error: string) => void;
 }
 
 interface FileStatus {
-  id: string; 
+  id: string;
   fileName: string;
   status: 'success' | 'failure';
+  fileType: string; // NEW: To show which structure was detected
   sheetsFound: string[];
   sheetsMissing: string[];
   error?: string;
 }
 
-const REQUIRED_SHEETS = ["Abonné", "Listing", "Fréquence par cellule", "Fréquence Correspondant", "Fréquence par Durée appel", "Fréquence par IMEI", "Identification des abonnés"];
+// --- NORMALIZATION AND CONFIGURATION (NEW & REFACTORED) ---
+
 const SHEET_ALTERNATIVES: { [key: string]: string[] } = {
   "Abonné": ["Abonne", "Abonnés", "Abonnes", "Subscribers", "Subscriber"],
   "Listing": ["Listings", "Communications", "Calls", "Call_List"],
+  "Listing Appel": ["Listing_Appel", "Call Listing"],
+  "Listing SMS": ["Listing_SMS", "SMS Listing"],
+  "IMEI partagé": ["IMEI partagé", "Shared IMEI"],
   "Fréquence par cellule": ["Frequence par cellule", "Cell Frequency", "Cellule"],
   "Fréquence Correspondant": ["Frequence Correspondant", "Correspondent Frequency"],
   "Fréquence par Durée appel": ["Frequence par Duree appel", "Call Duration Frequency"],
@@ -48,40 +53,175 @@ const findSheetMatch = (sheetNames: string[], requiredSheet: string): string | n
     return null;
 };
 
-const validateAndParseWorkbook = (workbook: XLSX.WorkBook): { data: ExcelData | null; missingSheets: string[] } => {
-    const sheetNames = workbook.SheetNames;
-    const missingSheets: string[] = [];
-    const alternativeSheets: { [key: string]: string } = {};
+// NEW: Normalization function for SMS data
+const normalizeSmsData = (data: any[]): Record<string, unknown>[] => {
+    return data.map(row => ({
+        // Map SMS columns to the standard "Listing" column names
+        // IMPORTANT: Adjust the target keys ('Numéro A', etc.) to match the exact headers of your standard "Listing" sheet.
+        'Numéro A': row['Numéro émetteur'],
+        'Numéro B': row['Numéro récepteur'],
+        'Date': row['Date SMS'] instanceof Date ? (row['Date SMS'] as Date).toLocaleDateString() : row['Date SMS'],
+        'Heure': row['Date SMS'] instanceof Date ? (row['Date SMS'] as Date).toLocaleTimeString() : '',
+        'Localisation': row['Localisation numéro Destination (Longitude, Latitude)'],
+        'IMEI': row['IMEI numéro récepteur'],
+        // Add any other standard columns with default values if they don't exist in SMS data
+        'Type': 'SMS', 
+    }));
+};
 
-    for (const requiredSheet of REQUIRED_SHEETS) {
+// NEW: Configuration for all supported file structures
+const FILE_STRUCTURE_CONFIGS = [
+    {
+        id: 'TYPE_2_CALL_SMS',
+        name: "Orange Listing ",
+        detector: (sheetNames: string[]) => findSheetMatch(sheetNames, "Listing Appel") && findSheetMatch(sheetNames, "Listing SMS"),
+        requiredSheets: ["Abonné", "Listing Appel", "Listing SMS", "Fréquence par cellule", "Fréquence Correspondant", "Fréquence par Durée appel", "Fréquence par IMEI", "Identification des abonnés"],
+        sheetMappings: {
+            subscribers: [{ sheetName: "Abonné" }],
+            listings: [
+                { sheetName: "Listing Appel" }, // No transformer needed, structure is standard
+                { sheetName: "Listing SMS", transformer: normalizeSmsData } // Use the transformer for SMS data
+            ]
+        }
+    },
+    {
+        id: 'TYPE_1_STANDARD',
+        name: "MTN Listing",
+        detector: (sheetNames: string[]) => !!findSheetMatch(sheetNames, "Listing"),
+        requiredSheets: ["Abonné", "Listing", "Fréquence par cellule", "Fréquence Correspondant", "Fréquence par Durée appel", "Fréquence par IMEI", "Identification des abonnés"],
+        sheetMappings: {
+            subscribers: [{ sheetName: "Abonné" }],
+            listings: [{ sheetName: "Listing" }]
+        }
+    },
+    {
+        id: 'TYPE_3_SHARED_IMEI',
+        name: "IMEI Listing",
+        detector: (sheetNames: string[]) => !!findSheetMatch(sheetNames, "Listing"),
+        requiredSheets: ["Imei partagé", "Listing", "Fréquence par cellule", "Fréquence Correspondant", "Identification des abonnés"],
+        sheetMappings: {
+            // Note: Assuming "IMEI partagé" can be treated as subscribers data.
+            // If it has a different structure, a transformer would be needed here too.
+            subscribers: [{ sheetName: "Imei partagé" }],
+            listings: [{ sheetName: "Listing" }]
+        }
+    }
+];
+
+// REFACTORED: The main parsing logic now detects and uses the correct configuration
+// REFACTORED AND FIXED: The main parsing logic
+const validateAndParseWorkbook = (workbook: XLSX.WorkBook): { data: ExcelData | null; missingSheets: string[], fileType: string } => {
+    const sheetNames = workbook.SheetNames;
+
+    // 1. Detect which file structure this workbook uses
+    const config = FILE_STRUCTURE_CONFIGS.find(c => c.detector(sheetNames));
+
+    // 2. Handle the case where the file structure is not recognized
+    if (!config) {
+        // THE FIX IS HERE:
+        // The object being returned now correctly includes the 'missingSheets' property.
+        // This guarantees that the calling function will not fail.
+        return { data: null, missingSheets: ['File structure not recognized.'], fileType: 'Unknown Structure' };
+    }
+
+    // 3. Validate that all required sheets for the detected structure exist
+    const missingSheets: string[] = [];
+    const foundSheets: { [key: string]: string } = {};
+
+    for (const requiredSheet of config.requiredSheets) {
         const match = findSheetMatch(sheetNames, requiredSheet);
         if (match) {
-            if (match !== requiredSheet) alternativeSheets[requiredSheet] = match;
+            foundSheets[requiredSheet] = match;
         } else {
             missingSheets.push(requiredSheet);
         }
     }
 
     if (missingSheets.length > 0) {
-        return { data: null, missingSheets };
+        return { data: null, missingSheets, fileType: config.name };
     }
 
-    const data: ExcelData = {};
-    const sheetMapping: { [key in keyof ExcelData]: string } = {
-        subscribers: "Abonné",
-        listings: "Listing",
-    };
-    
-    for (const [key, sheetName] of Object.entries(sheetMapping)) {
-        const actualSheetName = alternativeSheets[sheetName] || sheetName;
-        const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[actualSheetName], { defval: null, raw: false, blankrows: false });
-        data[key as keyof ExcelData] = sheetData as Record<string, unknown>[];
+    // 4. Parse and transform data according to the configuration
+    const data: ExcelData = { subscribers: [], listings: [] };
+
+    for (const [targetKey, mappings] of Object.entries(config.sheetMappings)) {
+        for (const mapping of mappings as any[]) { // Using 'as any[]' to simplify looping
+            const actualSheetName = foundSheets[mapping.sheetName];
+            if (actualSheetName) {
+                const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[actualSheetName], { defval: null, raw: false, blankrows: false });
+
+                const processedData = mapping.transformer
+                    ? mapping.transformer(sheetData)
+                    : sheetData as Record<string, unknown>[];
+
+                if (targetKey === 'subscribers' && data.subscribers) {
+                    data.subscribers.push(...processedData);
+                } else if (targetKey === 'listings' && data.listings) {
+                    data.listings.push(...processedData);
+                }
+            }
+        }
     }
-    
-    return { data, missingSheets: [] };
+
+    return { data, missingSheets: [], fileType: config.name };
 };
+/*
+const validateAndParseWorkbook = (workbook: XLSX.WorkBook): { data: ExcelData | null; missingSheets: string[], fileType: string } => {
+    const sheetNames = workbook.SheetNames;
 
+    // 1. Detect which file structure this workbook uses
+    const config = FILE_STRUCTURE_CONFIGS.find(c => c.detector(sheetNames));
+
+    if (!config) {
+        return { data: null, missingSheets: [], fileType: 'Unknown Structure' };
+    }
+
+    // 2. Validate that all required sheets for the detected structure exist
+    const missingSheets: string[] = [];
+    const foundSheets: { [key: string]: string } = {}; // Maps required name to actual found name
+
+    for (const requiredSheet of config.requiredSheets) {
+        const match = findSheetMatch(sheetNames, requiredSheet);
+        if (match) {
+            foundSheets[requiredSheet] = match;
+        } else {
+            missingSheets.push(requiredSheet);
+        }
+    }
+
+    if (missingSheets.length > 0) {
+        return { data: null, missingSheets, fileType: config.name };
+    }
+
+    // 3. Parse and transform data according to the configuration
+    const data: ExcelData = { subscribers: [], listings: [] };
+
+    for (const [targetKey, mappings] of Object.entries(config.sheetMappings)) {
+        for (const mapping of mappings) {
+            const actualSheetName = foundSheets[mapping.sheetName];
+            if (actualSheetName) {
+                const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[actualSheetName], { defval: null, raw: false, blankrows: false });
+                
+                const processedData = mapping.transformer 
+                    ? mapping.transformer(sheetData) 
+                    : sheetData as Record<string, unknown>[];
+
+                if (targetKey === 'subscribers') {
+                    data.subscribers.push(...processedData);
+                } else if (targetKey === 'listings') {
+                    data.listings.push(...processedData);
+                }
+            }
+        }
+    }
+
+    return { data, missingSheets: [], fileType: config.name };
+};
+*/
+
+// Original getWorkbooksFromFile function remains the same
 const getWorkbooksFromFile = async (file: File): Promise<{name: string; workbook: XLSX.WorkBook; allSheetNames: string[]}[]> => {
+    // ... no changes needed here
     const buffer = await file.arrayBuffer();
     if (file.name.toLowerCase().endsWith('.zip')) {
         const zip = await JSZip.loadAsync(buffer);
@@ -104,6 +244,8 @@ const getWorkbooksFromFile = async (file: File): Promise<{name: string; workbook
     }
 };
 
+// --- REACT COMPONENTS (With minor update to StatusItem) ---
+
 const StatusItem: React.FC<{ status: FileStatus }> = ({ status }) => {
     const [isOpen, setIsOpen] = useState(false);
     const isSuccess = status.status === 'success';
@@ -115,6 +257,8 @@ const StatusItem: React.FC<{ status: FileStatus }> = ({ status }) => {
                     <span className="font-medium text-foreground truncate">{status.fileName}</span>
                 </div>
                 <div className="flex items-center gap-2">
+                    {/* NEW: Display detected file type */}
+                    <span className="px-2 py-0.5 rounded-full text-xs font-normal bg-blue-100 text-blue-800">{status.fileType}</span>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${isSuccess ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
                         {isSuccess ? 'Success' : 'Failed'}
                     </span>
@@ -144,8 +288,8 @@ const StatusItem: React.FC<{ status: FileStatus }> = ({ status }) => {
     )
 };
 
-
 export function FileUploader({ onUpload, onError }: FileUploaderProps) {
+  // --- STATE AND HOOKS (REFACTORED processAllFiles) ---
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [fileStatuses, setFileStatuses] = useState<FileStatus[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -171,18 +315,19 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
         try {
             const workbooks = await getWorkbooksFromFile(file);
             for (const { name, workbook, allSheetNames } of workbooks) {
-                const { data, missingSheets } = validateAndParseWorkbook(workbook);
+                // REFACTORED: Now receives fileType as well
+                const { data, missingSheets, fileType } = validateAndParseWorkbook(workbook);
                 if (data) {
-                    newStatuses.push({ id: `${file.name}-${name}`, fileName: name, status: 'success', sheetsFound: allSheetNames, sheetsMissing: [] });
+                    newStatuses.push({ id: `${file.name}-${name}`, fileName: name, status: 'success', fileType, sheetsFound: allSheetNames, sheetsMissing: [] });
                     if (data.subscribers) combinedData.subscribers.push(...data.subscribers);
                     if (data.listings) combinedData.listings.push(...data.listings);
                 } else {
-                    newStatuses.push({ id: `${file.name}-${name}`, fileName: name, status: 'failure', sheetsFound: allSheetNames, sheetsMissing });
+                    newStatuses.push({ id: `${file.name}-${name}`, fileName: name, status: 'failure', fileType, sheetsFound: allSheetNames, sheetsMissing });
                 }
             }
         } catch (e) {
             const error = e instanceof Error ? e.message : "An unknown error occurred.";
-            newStatuses.push({ id: file.name, fileName: file.name, status: 'failure', sheetsFound: [], sheetsMissing: [], error });
+            newStatuses.push({ id: file.name, fileName: file.name, status: 'failure', fileType: 'Read Error', sheetsFound: [], sheetsMissing: [], error });
         }
     }));
 
@@ -202,9 +347,11 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
     setIsProcessing(false);
   }, [uploadedFiles, analysisName, onError]);
 
+  // The rest of the component (useEffect, onDrop, handleStartAnalysis, and render functions) remains the same.
+  // ...
   useEffect(() => {
       processAllFiles();
-  }, [uploadedFiles]); // Removed processAllFiles from dependency array to prevent potential re-renders
+  }, [uploadedFiles, processAllFiles]); 
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
@@ -246,7 +393,7 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
   );
 
   const renderStagingView = () => (
-    <div {...getRootProps()} className="bg-muted/50 border border-border rounded-lg p-4 space-y-4 cursor-default">
+    <div {...getRootProps({onClick: e => e.preventDefault()})} className="bg-muted/50 border border-border rounded-lg p-4 space-y-4 cursor-default">
         <input {...getInputProps()} />
         <div className="flex items-start justify-between">
             <h3 className="text-lg font-semibold">Analysis Staging Area</h3>
@@ -268,7 +415,6 @@ export function FileUploader({ onUpload, onError }: FileUploaderProps) {
                 <label className="block text-sm font-medium text-foreground"><Edit3 className="w-4 h-4 inline mr-2" /> Name this Analysis</label>
                 <input type="text" onClick={e => e.stopPropagation()} value={analysisName} onChange={(e) => setAnalysisName(e.target.value)} placeholder="e.g., Multi-Case Analysis" className="w-full px-3 py-2 bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"/>
                 <button onClick={(e) => { e.stopPropagation(); handleStartAnalysis(); }} disabled={!analysisName.trim() || isProcessing} className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed">
-                   {/* FIXED: Added closing </> tag to the fragment */}
                    {isProcessing ? <><Loader2 className="w-4 h-4 animate-spin mr-2"/> Processing...</> : <>Start Analysis <ArrowRight className="w-4 h-4" /></>}
                 </button>
             </motion.div>

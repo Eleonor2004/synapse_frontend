@@ -193,9 +193,6 @@ export default function WorkbenchPage() {
         <AuthGuard>
             <div className="min-h-screen bg-background text-foreground">
                 <NotificationContainer notifications={notifications} removeNotification={removeNotification} />
-                <header className="h-[60px] border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50 flex items-center px-6">
-                    <h1 className="text-xl font-bold">Analysis Workbench</h1>
-                </header>
                 <main>
                     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] p-6">
                         <div className="text-center max-w-md">
@@ -348,9 +345,7 @@ export default function WorkbenchPage() {
     <AuthGuard>
       <div className="min-h-screen bg-background text-foreground">
         <NotificationContainer notifications={notifications} removeNotification={removeNotification} />
-        <header className="h-[60px] border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50 flex items-center px-6">
-            <h1 className="text-xl font-bold">Analysis Workbench</h1>
-        </header>
+        
         <main>
            <AnimatePresence mode="wait">
               <motion.div key={isAnalysisView ? 'analysis' : 'welcome'} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} >
