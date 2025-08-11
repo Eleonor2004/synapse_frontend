@@ -1,5 +1,3 @@
-// src/app/[locale]/workbench/page.tsx
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -8,23 +6,22 @@ import { AxiosError } from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from 'next/dynamic';
 
-// FIXED: Import the new, correct filter type `WorkbenchFilters`
 import { FilterPanel, WorkbenchFilters } from "../../../components/workbench/FilterPanel";
 import { IndividualInfo } from "../../../components/workbench/IndividualInfo";
 import { AuthGuard } from "../../../components/auth/AuthGuard";
 import { useNotifications, NotificationContainer } from "../../../components/ui/Notification";
-import { LayoutGrid, Map, List, Eye, Loader2, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen, AlertTriangle } from "lucide-react";
+import { LayoutGrid, Map, List, Eye, Loader2, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen, AlertTriangle, Save, X, Upload } from "lucide-react";
 import { getMyListingSets, importListingsFile, getGraphDataForSets } from "../../../services/workbenchService";
-import { GraphResponse, ListingSet, LocationPoint } from "../../../types/api";
+import { ListingSet, LocationPoint } from "../../../types/api";
 
 const NetworkGraph = dynamic(() => 
   import("../../../components/workbench/NetworkGraph").then(mod => mod.NetworkGraph), 
-  { ssr: false, loading: () => <div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin"/></div> }
+  { ssr: false, loading: () => <div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary"/></div> }
 );
 
 const LocationGraph = dynamic(() => 
   import("../../../components/workbench/LocationGraph").then(mod => mod.LocationGraph),
-  { ssr: false, loading: () => <div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin"/></div> }
+  { ssr: false, loading: () => <div className="h-full flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary"/></div> }
 );
 
 import { FileUploader } from "../../../components/workbench/FileUploader";
@@ -55,9 +52,6 @@ export interface Individual {
   details: IndividualDetails;
 }
 
-// REMOVED: The old local `Filters` interface is no longer needed.
-// We now import `WorkbenchFilters` from the FilterPanel component.
-
 export default function WorkbenchPage() {
   const { addNotification, notifications, removeNotification } = useNotifications();
   const queryClient = useQueryClient();
@@ -70,20 +64,17 @@ export default function WorkbenchPage() {
   const [isIndividualPanelOpen, setIsIndividualPanelOpen] = useState(true);
   const [authError, setAuthError] = useState<boolean>(false);
   
-  // FIXED: Initialize the state with the full WorkbenchFilters structure
   const [filters, setFilters] = useState<WorkbenchFilters>({
     interactionType: "all",
     dateRange: { start: "", end: "" },
     individuals: [],
     minInteractions: 0,
-    contactWhitelist: [], // Added with default value
-    durationRange: { min: 0, max: 3600 }, // Added with default value
+    contactWhitelist: [],
+    durationRange: { min: 0, max: 3600 },
   });
 
-  // Check if we are on the client-side
   const isClient = typeof window !== 'undefined';
 
-  // Helper function to handle auth errors
   const handleAuthError = (error: AxiosError) => {
     if (error.response?.status === 401) {
       setAuthError(true);
@@ -91,7 +82,7 @@ export default function WorkbenchPage() {
     }
   };
 
-  const { data: listingSets, isLoading: isLoadingSets, error: listingSetsError } = useQuery({
+  const { data: listingSets, isLoading: isLoadingSets } = useQuery({
     queryKey: ['listingSets'],
     queryFn: getMyListingSets,
     enabled: isClient,
@@ -104,9 +95,10 @@ export default function WorkbenchPage() {
     },
   });
   
-  const { data: remoteGraphData, isLoading: isLoadingGraph, error: graphError } = useQuery({
-    queryKey: ['graphData', selectedListingSet?.id],
-    queryFn: (): Promise<GraphResponse> => getGraphDataForSets([selectedListingSet!.id]),
+  // This query now fetches the RAW listings data array
+  const { data: listingsDataFromBackend, isLoading: isLoadingGraph } = useQuery({
+    queryKey: ['listingsData', selectedListingSet?.id],
+    queryFn: () => getGraphDataForSets([selectedListingSet!.id]),
     enabled: !!selectedListingSet && isClient,
     retry: (failureCount, error) => {
       if (error instanceof AxiosError && error.response?.status === 401) {
@@ -120,110 +112,112 @@ export default function WorkbenchPage() {
   const uploadMutation = useMutation({
     mutationFn: importListingsFile,
     onSuccess: (data) => {
-      addNotification("success", "Analysis Saved", `Analysis "${data.listing_set.name}" has been saved to your account.`);
+      addNotification("success", "Analysis Saved", `Analysis "${data.listing_set.name}" has been saved and is processing.`);
       queryClient.invalidateQueries({ queryKey: ['listingSets'] });
+      setSelectedListingSet(data.listing_set);
+      setClientSideData(null);
     },
     onError: (error: AxiosError<{ detail: string }>) => {
-      if (error.response?.status === 401) {
-        handleAuthError(error);
-      } else {
-        addNotification("error", "Save Failed", error.response?.data?.detail || "Could not save the analysis to the server.");
-      }
+      handleAuthError(error);
+      addNotification("error", "Save Failed", error.response?.data?.detail || "Could not save the analysis.");
     },
   });
 
-  // Effect to show auth error notification
-  useEffect(() => {
-    if (listingSetsError instanceof AxiosError && listingSetsError.response?.status === 401) {
-      handleAuthError(listingSetsError);
-    }
-    if (graphError instanceof AxiosError && graphError.response?.status === 401) {
-      handleAuthError(graphError);
-    }
-  }, [listingSetsError, graphError, handleAuthError]);
-
-  const handleFileUpload = (parsedData: ExcelData, analysisName: string) => {
-    if (!analysisName || !parsedData.listings) return;
-    
-    addNotification("info", "Visualizing Data", "Your graph is being rendered instantly.");
+  const handleFileUpload = (parsedData: ExcelData) => {
+    addNotification("info", "File Ready", "Data has been parsed. Click 'Visualize & Save' to proceed.");
     setClientSideData(parsedData);
     setSelectedListingSet(null);
     setSelectedIndividual(null);
     setActiveView('network');
-    setAuthError(false); // Reset auth error on successful action
+  };
 
-    uploadMutation.mutate({ name: analysisName, listings: parsedData.listings as Record<string, unknown>[] });
+  const handleVisualizeAndSave = () => {
+    if (!clientSideData) return;
+    const analysisName = prompt("Please enter a name for this analysis:", `Case File - ${new Date().toLocaleDateString()}`);
+    if (!analysisName) return;
+    if (!clientSideData.listings || clientSideData.listings.length === 0) {
+      addNotification("error", "Save Failed", "No 'Listing' data found in the file.");
+      return;
+    }
+    uploadMutation.mutate({ name: analysisName, listings: clientSideData.listings as Record<string, unknown>[] });
   };
 
   const handleViewAnalysis = (listingSet: ListingSet) => {
+    console.log(`Viewing past analysis: "${listingSet.name}" (ID: ${listingSet.id})`);
     setSelectedListingSet(listingSet);
     setClientSideData(null); 
     setSelectedIndividual(null);
     setActiveView('network');
-    setAuthError(false); // Reset auth error on new action
   };
   
   const handleBackToUpload = () => {
     setSelectedListingSet(null);
     setClientSideData(null);
     setSelectedIndividual(null);
-    setAuthError(false);
   }
   
+  // --- THE DEFINITIVE DATA ADAPTER ---
   const activeData: ExcelData | null = useMemo(() => {
     if (clientSideData) {
+      console.log("Using client-side parsed data for visualization.");
       return clientSideData;
     }
     
-    if (remoteGraphData && remoteGraphData.network && remoteGraphData.network.nodes) {
-      const transformedListings = remoteGraphData.network.nodes.map(node => ({
-          id: node.id,
-          label: node.label,
-          ...node.properties
+    if (listingsDataFromBackend) {
+      console.log("Transforming fetched backend data for visualization:", listingsDataFromBackend);
+      // The backend sends clean data. We map it back to the "raw" Excel header
+      // format that the graph components expect.
+      const transformedListings = listingsDataFromBackend.map(row => ({
+        "Numéro Appelant": row.caller_num,
+        "Numéro appelé": row.callee_num,
+        "Date Début appel": row.timestamp,
+        "Durée appel": row.duration_str,
+        "IMEI numéro appelant": row.imei,
+        "Localisation": row.location,
       }));
 
       return { 
         listings: transformedListings, 
-        locations: remoteGraphData.locations
+        // You can add other sheets here if needed in the future
       };
     }
     
     return null;
-  }, [clientSideData, remoteGraphData]);
+  }, [clientSideData, listingsDataFromBackend]);
+  // ---------------------------------------------
 
   const isAnalysisView = !!activeData;
 
-  // Show auth error state
   if (authError) {
     return (
-      <AuthGuard>
-        <div className="min-h-screen bg-background text-foreground">
-          <NotificationContainer notifications={notifications} removeNotification={removeNotification} />
-          <header className="h-[60px] border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50 flex items-center px-6">
-              <h1 className="text-xl font-bold">Analysis Workbench</h1>
-          </header>
-          <main>
-            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] p-6">
-              <div className="text-center max-w-md">
-                <AlertTriangle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-                <h2 className="text-2xl font-bold mb-2">Authentication Required</h2>
-                <p className="text-muted-foreground mb-6">Your session has expired or you're not properly authenticated. Please log in again to continue.</p>
-                <button 
-                  onClick={() => window.location.href = '/en/login'} // Adjust URL as needed
-                  className="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-                >
-                  Go to Login
-                </button>
-              </div>
+        <AuthGuard>
+            <div className="min-h-screen bg-background text-foreground">
+                <NotificationContainer notifications={notifications} removeNotification={removeNotification} />
+                <header className="h-[60px] border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50 flex items-center px-6">
+                    <h1 className="text-xl font-bold">Analysis Workbench</h1>
+                </header>
+                <main>
+                    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] p-6">
+                        <div className="text-center max-w-md">
+                            <AlertTriangle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+                            <h2 className="text-2xl font-bold mb-2">Authentication Required</h2>
+                            <p className="text-muted-foreground mb-6">Your session has expired or you're not properly authenticated. Please log in again to continue.</p>
+                            <button 
+                                onClick={() => window.location.href = '/en/login'}
+                                className="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+                            >
+                                Go to Login
+                            </button>
+                        </div>
+                    </div>
+                </main>
             </div>
-          </main>
-        </div>
-      </AuthGuard>
+        </AuthGuard>
     );
   }
   
   const renderWelcomeView = () => (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] p-6">
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-60px)] p-6">
         <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -242,7 +236,7 @@ export default function WorkbenchPage() {
                 {isLoadingSets ? (
                     <div className="flex items-center justify-center p-4"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
                 ) : (listingSets && listingSets.length > 0) ? (
-                    <div className="space-y-3 max-h-[40vh] overflow-y-auto">
+                    <div className="space-y-3 max-h-[40vh] overflow-y-auto p-1">
                     {listingSets?.map((set, index) => (
                         <motion.div 
                             key={set.id}
@@ -262,7 +256,7 @@ export default function WorkbenchPage() {
                     ))}
                     </div>
                 ) : (
-                    <div className="text-center py-8 text-muted-foreground">
+                    <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg mt-4">
                         <p>No past analyses found.</p>
                     </div>
                 )}
@@ -272,24 +266,24 @@ export default function WorkbenchPage() {
   );
   
   const renderAnalysisView = () => (
-     <div className="flex h-[calc(100vh-100px)] p-4 gap-4">
+     <div className="flex h-[calc(100vh-60px)]">
         <AnimatePresence>
             {isFilterPanelOpen && (
                 <motion.div
                     initial={{ width: 0, opacity: 0, x: -50 }} animate={{ width: 350, opacity: 1, x: 0 }}
                     exit={{ width: 0, opacity: 0, x: -50 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                    className="flex-shrink-0" >
+                    className="flex-shrink-0 h-full" >
                     <FilterPanel filters={filters} onFiltersChange={setFilters} data={activeData!} />
                 </motion.div>
             )}
         </AnimatePresence>
-        <div className="flex-1 flex flex-col min-w-0">
-            <div className="flex-shrink-0 bg-card border border-border rounded-lg p-2 mb-4">
+        <div className="flex-1 flex flex-col min-w-0 p-4 gap-4">
+            <div className="flex-shrink-0 bg-card border border-border rounded-lg p-2">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <button onClick={handleBackToUpload} className="px-3 py-2 text-sm rounded-md hover:bg-muted">← Back</button>
                         <div className="h-6 w-px bg-border"></div>
-                        <h2 className="font-semibold text-lg">{selectedListingSet?.name || "New Analysis"}</h2>
+                        <h2 className="font-semibold text-lg">{selectedListingSet?.name || "New Unsaved Analysis"}</h2>
                     </div>
                     <div className="flex items-center gap-2">
                         <button onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)} className="p-2 rounded-md hover:bg-muted" title={isFilterPanelOpen ? "Collapse Filters" : "Expand Filters"}>{isFilterPanelOpen ? <PanelLeftClose className="w-5 h-5" /> : <PanelLeftOpen className="w-5 h-5" />}</button>
@@ -302,13 +296,25 @@ export default function WorkbenchPage() {
                 </div>
             </div>
             
+            {clientSideData && (
+              <div className="flex-shrink-0 p-3 bg-blue-500/10 border-b border-blue-500/20 flex items-center justify-center gap-4 rounded-lg">
+                <p className="text-sm font-medium text-blue-800 dark:text-blue-200">This is an unsaved analysis.</p>
+                <button onClick={handleVisualizeAndSave} className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-primary text-white">
+                  <Save className="w-4 h-4" /> Save to My Analyses
+                </button>
+                <button onClick={() => setClientSideData(null)} className="p-2 hover:bg-red-500/20 rounded-full">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+            
             <div className="flex-1 min-h-0">
                 {isLoadingGraph ? (
                      <div className="h-full flex items-center justify-center text-center p-4 bg-card rounded-lg border">
                         <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin mb-4" />
                         <h3 className="text-xl font-semibold">Loading Analysis Data...</h3>
                     </div>
-                ) : (
+                ) : activeData ? (
                     <AnimatePresence mode="wait">
                         <motion.div key={activeView} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.3 }} className="w-full h-full" >
                             {activeView === 'network' ? (
@@ -318,6 +324,10 @@ export default function WorkbenchPage() {
                             )}
                         </motion.div>
                     </AnimatePresence>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-center p-4">
+                    <p>No data found for this analysis. The file might be empty or in an incorrect format.</p>
+                  </div>
                 )}
             </div>
         </div>
@@ -326,7 +336,7 @@ export default function WorkbenchPage() {
                 <motion.div
                     initial={{ width: 0, opacity: 0, x: 50 }} animate={{ width: 400, opacity: 1, x: 0 }}
                     exit={{ width: 0, opacity: 0, x: 50 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                    className="flex-shrink-0" >
+                    className="flex-shrink-0 h-full" >
                     <IndividualInfo individual={selectedIndividual} data={activeData!} />
                 </motion.div>
             )}
@@ -338,7 +348,9 @@ export default function WorkbenchPage() {
     <AuthGuard>
       <div className="min-h-screen bg-background text-foreground">
         <NotificationContainer notifications={notifications} removeNotification={removeNotification} />
-      
+        <header className="h-[60px] border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50 flex items-center px-6">
+            <h1 className="text-xl font-bold">Analysis Workbench</h1>
+        </header>
         <main>
            <AnimatePresence mode="wait">
               <motion.div key={isAnalysisView ? 'analysis' : 'welcome'} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} >

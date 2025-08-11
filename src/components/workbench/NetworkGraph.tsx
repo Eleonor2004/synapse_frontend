@@ -1538,15 +1538,7 @@ const exportAsPDF = async (svgString: string) => {
             </div>
           </div>
 
-          {/* Quick Tips */}
-          <div className="mt-3 pt-3 border-t border-gray-200/50 dark:border-gray-700/50">
-            <div className="flex items-center justify-center space-x-8 text-xs text-gray-500 dark:text-gray-400">
-              <span>💡 <strong>Click</strong> nodes to explore details</span>
-              <span>🔍 <strong>Drag</strong> to pan, <strong>scroll</strong> to zoom</span>
-              <span>🎯 <strong>Search</strong> to filter network</span>
-              <span>⚡ <strong>Restart layout</strong> to reorganize</span>
-            </div>
-          </div>
+      
         </div>
       </div>
     </div>

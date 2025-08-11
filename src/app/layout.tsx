@@ -1,6 +1,6 @@
 // src/app/layout.tsx
 export const metadata = {
-  title: 'Your App',
+  title: 'SYNAPSE by ANTIC',
   description: 'Your app description',
 }
 
