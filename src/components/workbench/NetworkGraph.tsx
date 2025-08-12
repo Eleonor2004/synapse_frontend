@@ -4,9 +4,9 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { Network, Users, Zap, Search, Phone, MapPin, Smartphone, X, Download, ZoomIn, ZoomOut, RotateCcw, Maximize } from 'lucide-react';
 import * as d3 from 'd3';
-import { useNetworkData, ExcelData, Filters, NetworkNode, NetworkEdge } from '@/hooks/useNetworkData'; // Adjust path
+import { useNetworkData, ExcelData, Filters, NetworkNode, NetworkEdge } from '../../hooks/useNetworkData'; // Adjust path
 import { NodeDetails } from './NodeDetails'; // Adjust path
-import { getEdgeColor } from '@/utils/network-graph-utils'; // Adjust path
+import { getEdgeColor } from '../../utils/network-graph-utils'; // Adjust path
 
 // Define types that are specific to this component
 interface Individual {
