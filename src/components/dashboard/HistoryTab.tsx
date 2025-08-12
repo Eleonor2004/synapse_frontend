@@ -7,9 +7,9 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
-import { getMyAnalyses, updateAnalysis, deleteAnalysis, getActivityHistory } from '@/services/historyService';
-import { useNotifications } from '@/components/ui/Notification';
-import { ListingSet, AuditEvent } from '@/types/api';
+import { getMyAnalyses, updateAnalysis, deleteAnalysis, getActivityHistory } from '../../services/historyService';
+import { useNotifications } from '../../components/ui/Notification';
+import { ListingSet, AuditEvent } from '../../types/api';
 import { useState } from 'react';
 
 const cardVariants: Variants = {
