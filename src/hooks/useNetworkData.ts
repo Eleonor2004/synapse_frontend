@@ -3,7 +3,7 @@
 
 import { useMemo } from 'react';
 import * as d3 from 'd3';
-import { cleanPhoneNumber, findFieldValue, isSMSData, parseDuration, getNodeSize, DynamicRow } from '@/utils/network-graph-utils';
+import { cleanPhoneNumber, findFieldValue, isSMSData, parseDuration, getNodeSize, DynamicRow } from '../utils/network-graph-utils';
 
 // Define your types here or import them
 export interface ExcelData {

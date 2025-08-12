@@ -4,7 +4,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Phone, X, Smartphone, MapPin } from 'lucide-react';
-import { NetworkNode, NetworkEdge } from '@/hooks/useNetworkData'; // Adjust path as needed
+import { NetworkNode, NetworkEdge } from '../../hooks/useNetworkData'; // Adjust path as needed
 
 interface NodeDetailsProps {
   node: NetworkNode | null;
