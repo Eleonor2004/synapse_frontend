@@ -1,16 +1,18 @@
 'use client';
 
-// FIX: Import the 'Variants' type
 import { motion, Variants } from 'framer-motion';
-// FIX: Removed unused icon imports
+import { useQuery } from '@tanstack/react-query';
 import { 
   BarChart3, 
   TrendingUp,
   Activity,
   FileText,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
+import { getDashboardStats } from '../../services/dashboardService';
+import { UserDashboardStats } from '../../types/api';
 
-// FIX: Explicitly type the constant with the 'Variants' type
 const cardVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: { 
@@ -29,16 +31,52 @@ const cardVariants: Variants = {
         ease: "easeOut"
       }
     }
-  };
+};
+
+// Helper function to format large numbers (e.g., 12345 -> "12.3k")
+const formatNumber = (num: number): string => {
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1) + 'M';
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1) + 'k';
+  }
+  return num.toString();
+};
 
 // Statistics Tab Component
-const StatisticsTab = () => {
+export default function StatisticsTab() {
+    // --- DATA FETCHING with TanStack Query ---
+    const { data: statsData, isLoading, isError } = useQuery<UserDashboardStats>({
+      queryKey: ['dashboardStats'], // A unique key for this query
+      queryFn: getDashboardStats,    // The service function to call
+    });
+
+    // --- DYNAMIC STATS from fetched data ---
     const stats = [
-      { label: 'Total Analyses', value: '2,847', change: '+12%', icon: BarChart3, color: 'from-blue-500 to-cyan-500', bg: 'from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20' },
-      { label: 'Data Processed', value: '4.2TB', change: '+8%', icon: Activity, color: 'from-emerald-500 to-teal-500', bg: 'from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20' },
-      { label: 'Success Rate', value: '99.2%', change: '+0.5%', icon: TrendingUp, color: 'from-purple-500 to-pink-500', bg: 'from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20' },
-      { label: 'Active Projects', value: '18', change: '+3', icon: FileText, color: 'from-orange-500 to-red-500', bg: 'from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20' }
+      { label: 'Total Analyses', value: statsData ? formatNumber(statsData.total_analyses) : '0', change: '', icon: BarChart3, color: 'from-blue-500 to-cyan-500', bg: 'from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20' },
+      { label: 'Records Processed', value: statsData ? formatNumber(statsData.total_records_processed) : '0', change: '', icon: Activity, color: 'from-emerald-500 to-teal-500', bg: 'from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20' },
+      { label: 'Success Rate', value: '99.2%', change: '', icon: TrendingUp, color: 'from-purple-500 to-pink-500', bg: 'from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20' },
+      { label: 'Active Projects', value: '18', change: '', icon: FileText, color: 'from-orange-500 to-red-500', bg: 'from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20' }
     ];
+
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      );
+    }
+
+    if (isError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-96 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+          <h3 className="text-xl font-semibold text-red-700 dark:text-red-300">Error Fetching Statistics</h3>
+          <p className="text-red-600 dark:text-red-400">Could not load your dashboard data. Please try again later.</p>
+        </div>
+      );
+    }
   
     return (
       <motion.div
@@ -46,7 +84,6 @@ const StatisticsTab = () => {
         animate={{ opacity: 1 }}
         className="space-y-8"
       >
-        {/* Header */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -57,7 +94,6 @@ const StatisticsTab = () => {
           <p className="text-gray-600 dark:text-gray-400">Track your performance and key metrics</p>
         </motion.div>
   
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {stats.map((stat, index) => (
             <motion.div
@@ -73,9 +109,11 @@ const StatisticsTab = () => {
                 <div className={`p-3 rounded-xl bg-gradient-to-r ${stat.color} shadow-lg`}>
                   <stat.icon className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                  {stat.change}
-                </span>
+                {stat.change && (
+                  <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                    {stat.change}
+                  </span>
+                )}
               </div>
               <p className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{stat.value}</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</p>
@@ -83,11 +121,11 @@ const StatisticsTab = () => {
           ))}
         </div>
   
-        {/* Chart Placeholder */}
         <motion.div
           variants={cardVariants}
           initial="hidden"
           animate="visible"
+          transition={{ delay: 0.4 }}
           className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-xl border border-gray-200 dark:border-gray-700"
         >
           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Performance Trends</h3>
@@ -100,6 +138,4 @@ const StatisticsTab = () => {
         </motion.div>
       </motion.div>
     );
-  };
-
-export default StatisticsTab;
+};

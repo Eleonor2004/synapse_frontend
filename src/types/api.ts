@@ -55,3 +55,10 @@ export interface GraphResponse {
   network: GraphData;
   locations: LocationPoint[];
 }
+
+// Dashboard statistics type
+
+export interface UserDashboardStats {
+  total_analyses: number;
+  total_records_processed: number;
+}
