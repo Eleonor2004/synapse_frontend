@@ -62,3 +62,13 @@ export interface UserDashboardStats {
   total_analyses: number;
   total_records_processed: number;
 }
+// History
+
+export interface AuditEvent {
+  id: string;
+  username: string;
+  action_type: string; // e.g., "LOGIN_SUCCESS", "CREATE_ANALYSIS"
+  timestamp: string;   // ISO date string
+  details: Record<string, any>;
+  status: string;      // "SUCCESS" or "FAILURE"
+}
