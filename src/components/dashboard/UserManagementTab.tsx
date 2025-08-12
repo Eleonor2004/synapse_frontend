@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { motion, Variants } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
-  Search, Filter, Plus, Eye, Edit3, MoreVertical, Trash2, User as UserIcon, Loader2, AlertCircle, Shield, Check, X
+  Search, Plus, Edit3, Trash2, Loader2, AlertCircle, Shield
 } from 'lucide-react';
 import { useNotifications } from '../../components/ui/Notification';
 import { User } from '@/types/api';
 import { getAllUsers, createUser, updateUser, deleteUser, UserCreationData, UserUpdateData } from '../../services/adminService';
+import { AdminAuthGuard } from '../../components/auth/AdminAuthGuard'; // Import the guard
 
 const cardVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
@@ -73,19 +74,17 @@ const UserModal = ({ user, onClose, onSave, isLoading }: { user?: User | null, o
 };
 
 // --- Main User Management Tab Component ---
-export default function UserManagementTab() {
+const UserManagementContent = () => {
     const { addNotification } = useNotifications();
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState('');
     const [modalState, setModalState] = useState<{ mode: 'create' | 'edit' | null, user?: User | null }>({ mode: null });
 
-    // --- DATA FETCHING ---
     const { data: users = [], isLoading, isError } = useQuery<User[]>({
       queryKey: ['allUsers'],
       queryFn: getAllUsers,
     });
 
-    // --- DATA MUTATIONS ---
     const createUserMutation = useMutation({
         mutationFn: createUser,
         onSuccess: () => {
@@ -165,6 +164,7 @@ export default function UserManagementTab() {
         <AnimatePresence>
             {modalState.mode && (
                 <UserModal 
+                    key="user-modal" // Add a key for stable animation
                     user={modalState.user} 
                     onClose={() => setModalState({ mode: null })} 
                     onSave={handleSaveUser}
@@ -210,7 +210,7 @@ export default function UserManagementTab() {
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white font-semibold">
-                                                {user.full_name?.charAt(0) || user.username.charAt(0)}
+                                                {(user.full_name?.charAt(0) || user.username.charAt(0)).toUpperCase()}
                                             </div>
                                             <div>
                                                 <p className="font-medium">{user.full_name || 'N/A'}</p>
@@ -236,3 +236,12 @@ export default function UserManagementTab() {
       </>
     );
 };
+
+// The final export wraps the content in the AdminAuthGuard
+export default function UserManagementTab() {
+    return (
+        <AdminAuthGuard>
+            <UserManagementContent />
+        </AdminAuthGuard>
+    );
+}
