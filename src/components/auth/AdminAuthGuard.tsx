@@ -2,8 +2,8 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
-import { useIsClient } from '@/hooks/useIsClient';
+import { useAuthStore } from '../../app/store/authStore';
+import { useIsClient } from '../../hooks/useIsClient';
 import { Loader2, ShieldAlert } from 'lucide-react';
 
 export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
