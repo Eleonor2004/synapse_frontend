@@ -1,5 +1,5 @@
-import apiClient from "@/lib/apiClient";
-import { ListingSet, AuditEvent } from "@/types/api"; // We'll create AuditEvent type next
+import apiClient from "../lib/apiClient";
+import { ListingSet, AuditEvent } from "../types/api"; // We'll create AuditEvent type next
 
 /**
  * Fetches all analyses (ListingSets) owned by the current user.
