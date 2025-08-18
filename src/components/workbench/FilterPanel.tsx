@@ -4,9 +4,9 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { Clock, XCircle, Users, Hash, MessageSquare, Calendar, Link, Zap, TrendingUp, Network, GitBranch } from "lucide-react";
-import { ExcelData } from "@/app/[locale]/workbench/page";
+import { ExcelData } from "../../app/[locale]/workbench/page";
 import Select, { StylesConfig, Theme } from 'react-select';
-import { getDurationStats } from "@/utils/multi-degree-link-analysis"; // Adjust path as needed
+import { getDurationStats } from "../../utils/multi-degree-link-anlysis"; // Adjust path as needed
 
 // Find a specific field value in a row, same as in NetworkGraph
 const findFieldValue = (row: Record<string, unknown>, fields: string[]): string | null => {
