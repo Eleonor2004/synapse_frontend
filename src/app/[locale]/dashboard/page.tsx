@@ -152,20 +152,7 @@ export default function EnhancedDashboard() {
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
                 <User className="w-5 h-5 text-white" />
               </div>
-              <AnimatePresence>
-                {isExpanded && (
-                  <motion.div
-                    variants={labelVariants}
-                    initial="collapsed"
-                    animate="expanded"
-                    exit="collapsed"
-                    className="flex-1 min-w-0"
-                  >
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">Alex Johnson</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">alex@company.com</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              
             </div>
           </div>
         </div>
