@@ -7,7 +7,7 @@ import * as d3 from 'd3';
 import { useEnhancedNetworkData, NetworkNode, EnhancedNetworkEdge, ExcelData, EnhancedFilters } from '../../hooks/useEnhancedNetworkData'; // Adjust path
 import { NodeDetails } from './NodeDetails'; // Adjust path
 // Ensure these utility functions exist and are correctly typed
-import { getLinkClassificationColor, getLinkClassificationWidth } from '../../utils/link-analysis'; // Adjust path as needed
+import { getLinkClassificationColor, getLinkClassificationWidth } from '../../utils/link-classification'; // Adjust path as needed
 
 // Define types that are specific to this component
 interface Individual {
