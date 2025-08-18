@@ -6,7 +6,7 @@ import {
   filterMultiDegreeLinks, 
   convertLinksToEdges, 
   MultiDegreeLink 
-} from '../utils/multi-degree-link-analysis';
+} from '../utils/multi-degree-link-anlysis';
 
 export interface NetworkNode {
   id: string;
