@@ -1,3 +1,0 @@
-Hello Claud I am working on an app that enables to visualize interactions between individuals from their listings and also their locations through time so i have two components fro that NetworkGraph and LocationGraph. The NetworkGraph works normally but not the LocationGraph since I did fixes in it for a correct build. I will subli the code of these two components and the component FileUploader that enables to upload files and parse it to extract data from the files to send it to Networkgrap and Locationgrap too so that you anlyze it meticulously and explain why the LocationGraph is not correctly viewed and displays: No Location Data Found
-
-Could not find valid location data in the file. 

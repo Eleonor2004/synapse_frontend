@@ -52,35 +52,35 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
     return classifyNetworkEdges(networkData.edges, data.listings);
   }, [networkData.edges, data?.listings]);
 
-  // *** FIXED AND ROBUST FILTERING LOGIC ***
-  const filteredEnhancedEdges = useMemo(() => {
-    // Destructure `filters` with default values to prevent crashes.
-    const {
-      linkTypes = ['primary', 'secondary', 'weak'], // Default to all types
-      minStrengthScore = 0,                        // Default to 0
-      showWeakLinks = true,                        // Default to true
-    } = filters;
+  // Updated section of NetworkGraph.tsx - Replace the filteredEnhancedEdges useMemo
 
-    if (!enhancedEdges) return [];
+const filteredEnhancedEdges = useMemo(() => {
+  if (!enhancedEdges || enhancedEdges.length === 0) return [];
+  
+  // Provide safe defaults for all filter properties that might be undefined
+  const safeFilters = {
+    linkTypes: filters.linkTypes || ['primary', 'secondary', 'weak'],
+    minStrengthScore: filters.minStrengthScore ?? 0,
+    showWeakLinks: filters.showWeakLinks ?? true,
+  };
+  
+  return enhancedEdges.filter(edge => {
+    // Safe to use .includes() now since we guaranteed linkTypes is an array
+    if (!safeFilters.linkTypes.includes(edge.linkStrength.classification)) {
+      return false;
+    }
     
-    return enhancedEdges.filter(edge => {
-      // This is now safe, as `linkTypes` will always be an array.
-      if (!linkTypes.includes(edge.linkStrength.classification)) {
-        return false;
-      }
-      
-      if (edge.linkStrength.strengthScore < minStrengthScore) {
-        return false;
-      }
-      
-      if (!showWeakLinks && edge.linkStrength.classification === 'weak') {
-        return false;
-      }
-      
-      return true;
-    });
-  }, [enhancedEdges, filters]); // Simplified dependency array is cleaner and safer
-
+    if (edge.linkStrength.strengthScore < safeFilters.minStrengthScore) {
+      return false;
+    }
+    
+    if (!safeFilters.showWeakLinks && edge.linkStrength.classification === 'weak') {
+      return false;
+    }
+    
+    return true;
+  });
+}, [enhancedEdges, filters]);
   // Filter nodes based on search and connected edges
   const visibleNodes = useMemo(() => {
     let filtered = networkData.nodes;

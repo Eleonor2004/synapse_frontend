@@ -64,14 +64,20 @@ export default function WorkbenchPage() {
   const [isIndividualPanelOpen, setIsIndividualPanelOpen] = useState(true);
   const [authError, setAuthError] = useState<boolean>(false);
   
-  const [filters, setFilters] = useState<WorkbenchFilters>({
-    interactionType: "all",
-    dateRange: { start: "", end: "" },
-    individuals: [],
-    minInteractions: 0,
-    contactWhitelist: [],
-    durationRange: { min: 0, max: 3600 },
-  });
+  // Updated filters state in your Workbench page - Replace the filters useState
+
+const [filters, setFilters] = useState<WorkbenchFilters>({
+  interactionType: "all",
+  dateRange: { start: "", end: "" },
+  individuals: [],
+  minInteractions: 0,
+  contactWhitelist: [],
+  durationRange: { min: 0, max: 3600 },
+  // Add the missing filter properties that NetworkGraph expects
+  linkTypes: ['primary', 'secondary', 'weak'],
+  minStrengthScore: 0,
+  showWeakLinks: true,
+});
 
   const isClient = typeof window !== 'undefined';
 
