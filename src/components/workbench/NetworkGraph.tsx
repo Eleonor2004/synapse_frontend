@@ -2,11 +2,11 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { Network, Users, Zap, Search, Phone, MapPin, Smartphone, X, Download, ZoomIn, ZoomOut, RotateCcw, Maximize, Link as LinkIcon, TrendingUp } from 'lucide-react';
+import { Network, Users, Zap, Search, Phone, MapPin, Smartphone, X, Download, ZoomIn, ZoomOut, RotateCcw, Maximize, Link as LinkIcon, TrendingUp, GitBranch, Info } from 'lucide-react';
 import * as d3 from 'd3';
-import { useNetworkData, ExcelData, Filters, NetworkNode, NetworkEdge } from '../../hooks/useNetworkData'; // Adjust path
+import { useEnhancedNetworkData, NetworkNode, EnhancedNetworkEdge, ExcelData, EnhancedFilters } from '../hooks/useEnhancedNetworkData'; // Adjust path
 import { NodeDetails } from './NodeDetails'; // Adjust path
-import { classifyNetworkEdges, EnhancedNetworkEdge, getLinkClassificationColor, getLinkClassificationWidth } from '../../utils/link-classification'; // Adjust path
+import { getMultiDegreeLinkColor, getMultiDegreeLinkWidth } from '../utils/multi-degree-link-analysis'; // Adjust path
 
 // Define types that are specific to this component
 interface Individual {
@@ -21,13 +21,17 @@ interface Individual {
   };
 }
 
-interface NetworkGraphProps {
+interface EnhancedNetworkGraphProps {
   data: ExcelData | null;
-  filters: Filters;
+  filters: EnhancedFilters;
   onIndividualSelect: (individual: Individual) => void;
 }
 
-export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onIndividualSelect }) => {
+export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({ 
+  data, 
+  filters, 
+  onIndividualSelect 
+}) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, EnhancedNetworkEdge> | null>(null);
@@ -42,46 +46,12 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = ({ data, filters, onInd
   const [isExporting, setIsExporting] = useState(false);
   const [transform, setTransform] = useState(d3.zoomIdentity);
   const [isSimulationRunning, setIsSimulationRunning] = useState(false);
+  const [showAdvancedInfo, setShowAdvancedInfo] = useState(false);
 
-  // Use the custom hook for data processing
-  const networkData = useNetworkData(data, filters);
+  // Use the enhanced hook for data processing
+  const networkData = useEnhancedNetworkData(data, filters);
 
-  // Enhanced edges with classification
-  const enhancedEdges = useMemo(() => {
-    if (!data?.listings || networkData.edges.length === 0) return [];
-    return classifyNetworkEdges(networkData.edges, data.listings);
-  }, [networkData.edges, data?.listings]);
-
-  // Updated section of NetworkGraph.tsx - Replace the filteredEnhancedEdges useMemo
-
-const filteredEnhancedEdges = useMemo(() => {
-  if (!enhancedEdges || enhancedEdges.length === 0) return [];
-  
-  // Provide safe defaults for all filter properties that might be undefined
-  const safeFilters = {
-    linkTypes: filters.linkTypes || ['primary', 'secondary', 'weak'],
-    minStrengthScore: filters.minStrengthScore ?? 0,
-    showWeakLinks: filters.showWeakLinks ?? true,
-  };
-  
-  return enhancedEdges.filter(edge => {
-    // Safe to use .includes() now since we guaranteed linkTypes is an array
-    if (!safeFilters.linkTypes.includes(edge.linkStrength.classification)) {
-      return false;
-    }
-    
-    if (edge.linkStrength.strengthScore < safeFilters.minStrengthScore) {
-      return false;
-    }
-    
-    if (!safeFilters.showWeakLinks && edge.linkStrength.classification === 'weak') {
-      return false;
-    }
-    
-    return true;
-  });
-}, [enhancedEdges, filters]);
-  // Filter nodes based on search and connected edges
+  // Filter nodes based on search
   const visibleNodes = useMemo(() => {
     let filtered = networkData.nodes;
     
@@ -92,42 +62,52 @@ const filteredEnhancedEdges = useMemo(() => {
       );
     }
     
+    // If there are contact filters, ensure we only show connected nodes
     const connectedNodeIds = new Set<string>();
-    filteredEnhancedEdges.forEach(edge => {
+    networkData.edges.forEach(edge => {
       connectedNodeIds.add(typeof edge.source === 'string' ? edge.source : edge.source.id);
       connectedNodeIds.add(typeof edge.target === 'string' ? edge.target : edge.target.id);
     });
     
     // Only return nodes that are part of a visible edge, unless there are no visible edges
-    if (filteredEnhancedEdges.length > 0) {
+    if (networkData.edges.length > 0) {
       return filtered.filter(node => connectedNodeIds.has(node.id));
     }
     return filtered;
 
-  }, [networkData.nodes, searchTerm, filteredEnhancedEdges]);
+  }, [networkData.nodes, searchTerm, networkData.edges]);
 
   const visibleEdges = useMemo(() => {
     const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
-    return filteredEnhancedEdges.filter(edge => 
+    return networkData.edges.filter(edge => 
       visibleNodeIds.has(typeof edge.source === 'object' ? edge.source.id : edge.source) &&
       visibleNodeIds.has(typeof edge.target === 'object' ? edge.target.id : edge.target)
     );
-  }, [filteredEnhancedEdges, visibleNodes]);
+  }, [networkData.edges, visibleNodes]);
 
-  // Link statistics for display
+  // Enhanced link statistics for display
   const linkStats = useMemo(() => {
-    const total = enhancedEdges.length;
-    const primary = enhancedEdges.filter(e => e.linkStrength.classification === 'primary').length;
-    const secondary = enhancedEdges.filter(e => e.linkStrength.classification === 'secondary').length;
-    const weak = enhancedEdges.filter(e => e.linkStrength.classification === 'weak').length;
-    const avgStrength = enhancedEdges.length > 0 
-      ? Math.round(enhancedEdges.reduce((sum, e) => sum + e.linkStrength.strengthScore, 0) / enhancedEdges.length)
+    const directLinks = visibleEdges.filter(e => e.degree === 1).length;
+    const secondaryLinks = visibleEdges.filter(e => e.degree === 2).length;
+    const tertiaryLinks = visibleEdges.filter(e => e.degree === 3).length;
+    const totalLinks = visibleEdges.length;
+    
+    const avgStrength = visibleEdges.length > 0 
+      ? Math.round(visibleEdges.reduce((sum, e) => 
+          sum + (e.linkStrength?.strengthScore || 0), 0) / visibleEdges.length)
       : 0;
     
-    return { total, primary, secondary, weak, avgStrength };
-  }, [enhancedEdges]);
+    return { 
+      total: totalLinks,
+      direct: directLinks, 
+      secondary: secondaryLinks, 
+      tertiary: tertiaryLinks, 
+      avgStrength,
+      multiDegreeTotal: networkData.stats.totalMultiDegreeLinks
+    };
+  }, [visibleEdges, networkData.stats]);
 
-  // D3 Force Simulation Setup
+  // D3 Force Simulation Setup with enhanced multi-degree support
   useEffect(() => {
     if (!svgRef.current || visibleNodes.length === 0) return;
 
@@ -141,6 +121,7 @@ const filteredEnhancedEdges = useMemo(() => {
     const width = dimensions.width;
     const height = dimensions.height;
 
+    
     const simulation = d3.forceSimulation<NetworkNode>(visibleNodes)
       .force("link", d3.forceLink<NetworkNode, EnhancedNetworkEdge>(visibleEdges)
         .id(d => d.id)
