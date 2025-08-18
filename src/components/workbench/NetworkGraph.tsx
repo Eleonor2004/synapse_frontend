@@ -4,9 +4,9 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { Network, Users, Zap, Search, Phone, MapPin, Smartphone, X, Download, ZoomIn, ZoomOut, RotateCcw, Maximize, Link as LinkIcon, TrendingUp, GitBranch, Info } from 'lucide-react';
 import * as d3 from 'd3';
-import { useEnhancedNetworkData, NetworkNode, EnhancedNetworkEdge, ExcelData, EnhancedFilters } from '../hooks/useEnhancedNetworkData'; // Adjust path
+import { useEnhancedNetworkData, NetworkNode, EnhancedNetworkEdge, ExcelData, EnhancedFilters } from '../../hooks/useEnhancedNetworkData'; // Adjust path
 import { NodeDetails } from './NodeDetails'; // Adjust path
-import { getMultiDegreeLinkColor, getMultiDegreeLinkWidth } from '../utils/multi-degree-link-analysis'; // Adjust path
+import { getMultiDegreeLinkColor, getMultiDegreeLinkWidth } from '../../utils/multi-degree-link-anlysis'; // Adjust path
 
 // Define types that are specific to this component
 interface Individual {
