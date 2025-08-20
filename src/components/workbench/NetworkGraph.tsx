@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { Network, Users, Zap, Search, Phone, MapPin, Smartphone, X, Download, ZoomIn, ZoomOut, RotateCcw, Maximize, Link as LinkIcon, TrendingUp, GitBranch, Info } from 'lucide-react';
+import { Network, Search, X, ZoomIn, ZoomOut, RotateCcw, Maximize, Info } from 'lucide-react';
 import * as d3 from 'd3';
 import { useEnhancedNetworkData, NetworkNode, EnhancedNetworkEdge, ExcelData, EnhancedFilters } from '../../hooks/useEnhancedNetworkData'; // Adjust path
 import { NodeDetails } from './NodeDetails'; // Adjust path
@@ -43,15 +43,17 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [showDetails, setShowDetails] = useState(false);
   const [detailsPosition, setDetailsPosition] = useState({ x: 0, y: 0 });
-  const [isExporting, setIsExporting] = useState(false);
   const [transform, setTransform] = useState(d3.zoomIdentity);
   const [isSimulationRunning, setIsSimulationRunning] = useState(false);
   const [showAdvancedInfo, setShowAdvancedInfo] = useState(false);
 
-  // Use the enhanced hook for data processing
+  // IMPORTANT: The "Minified React error #306" likely originates from this custom hook.
+  // Review the `useEnhancedNetworkData` hook to ensure that all React hooks within it
+  // (e.g., useState, useEffect, useMemo) are called at the top level and not inside
+  // any conditions, loops, or nested functions.
   const networkData = useEnhancedNetworkData(data, filters);
 
-  // Filter nodes based on search
+  // Memoize visible nodes based on search and connectivity
   const visibleNodes = useMemo(() => {
     let filtered = networkData.nodes;
     
@@ -62,14 +64,12 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
       );
     }
     
-    // If there are contact filters, ensure we only show connected nodes
     const connectedNodeIds = new Set<string>();
     networkData.edges.forEach(edge => {
       connectedNodeIds.add(typeof edge.source === 'string' ? edge.source : edge.source.id);
       connectedNodeIds.add(typeof edge.target === 'string' ? edge.target : edge.target.id);
     });
     
-    // Only return nodes that are part of a visible edge, unless there are no visible edges
     if (networkData.edges.length > 0) {
       return filtered.filter(node => connectedNodeIds.has(node.id));
     }
@@ -85,16 +85,16 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
     );
   }, [networkData.edges, visibleNodes]);
 
-  // Enhanced link statistics for display
+  // Memoize link statistics for display
   const linkStats = useMemo(() => {
     const directLinks = visibleEdges.filter(e => e.degree === 1).length;
     const secondaryLinks = visibleEdges.filter(e => e.degree === 2).length;
     const tertiaryLinks = visibleEdges.filter(e => e.degree === 3).length;
     const totalLinks = visibleEdges.length;
     
-    const avgStrength = visibleEdges.length > 0 
+    const avgStrength = totalLinks > 0 
       ? Math.round(visibleEdges.reduce((sum, e) => 
-          sum + (e.linkStrength?.strengthScore || 0), 0) / visibleEdges.length)
+          sum + (e.linkStrength?.strengthScore || 0), 0) / totalLinks)
       : 0;
     
     return { 
@@ -107,46 +107,34 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
     };
   }, [visibleEdges, networkData.stats]);
 
-  // D3 Force Simulation Setup with enhanced multi-degree support
+  // D3 Force Simulation Setup
   useEffect(() => {
     if (!svgRef.current || visibleNodes.length === 0) return;
 
     setIsSimulationRunning(true);
 
+    // This is a critical step to prevent the "removeChild" error.
+    // Before creating a new simulation, we must stop any existing one.
+    // This prevents multiple simulations from trying to manipulate the same DOM nodes.
     if (simulationRef.current) {
       simulationRef.current.stop();
     }
 
     const svg = d3.select(svgRef.current);
-    const width = dimensions.width;
-    const height = dimensions.height;
+    const { width, height } = dimensions;
 
     const simulation = d3.forceSimulation<NetworkNode>(visibleNodes)
       .force("link", d3.forceLink<NetworkNode, EnhancedNetworkEdge>(visibleEdges)
         .id(d => d.id)
         .distance(d => {
           const baseDistance = Math.min(120, 40 + d.width * 5);
-          
-          // Adjust distance based on connection degree
-          let degreeMultiplier = 1;
-          if (d.degree === 1) degreeMultiplier = 0.7; // Closer for direct connections
-          else if (d.degree === 2) degreeMultiplier = 1.2; // Medium distance for 2nd degree
-          else if (d.degree === 3) degreeMultiplier = 1.8; // Farther for 3rd degree
-          
-          // Adjust based on link strength
+          let degreeMultiplier = d.degree === 1 ? 0.7 : d.degree === 2 ? 1.2 : 1.8;
           const strengthMultiplier = d.linkStrength ? 
             (d.linkStrength.classification === 'primary' ? 0.8 : 
              d.linkStrength.classification === 'secondary' ? 1.0 : 1.3) : 1;
-          
           return baseDistance * degreeMultiplier * strengthMultiplier;
         })
-        .strength(d => {
-          // Stronger forces for direct connections, weaker for multi-degree
-          if (d.degree === 1) return 0.6;
-          else if (d.degree === 2) return 0.3;
-          else if (d.degree === 3) return 0.1;
-          return 0.2;
-        })
+        .strength(d => d.degree === 1 ? 0.6 : d.degree === 2 ? 0.3 : 0.1)
       )
       .force("charge", d3.forceManyBody<NetworkNode>()
         .strength(d => (visibleNodes.length > 100 ? -30 : -50) * (d.size / 20))
@@ -162,6 +150,8 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
     simulationRef.current = simulation;
 
     simulation.on("tick", () => {
+      // D3 imperatively updates node and edge positions.
+      // React is unaware of these direct DOM manipulations.
       svg.selectAll<SVGCircleElement, NetworkNode>(".node")
         .attr("cx", d => d.x || 0)
         .attr("cy", d => d.y || 0);
@@ -178,22 +168,26 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
     });
 
     simulation.on("end", () => setIsSimulationRunning(false));
+    
+    // The cleanup function is crucial. It runs when the component unmounts or
+    // when the dependencies of this useEffect change, ensuring the simulation is stopped.
     return () => simulation.stop();
   }, [visibleNodes, visibleEdges, dimensions]);
 
   // Handle container resize
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
     const handleResize = () => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        setDimensions({ width: rect.width, height: rect.height });
-      }
+      const rect = container.getBoundingClientRect();
+      setDimensions({ width: rect.width, height: rect.height });
     };
+
     const observer = new ResizeObserver(handleResize);
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-      handleResize();
-    }
+    observer.observe(container);
+    handleResize(); // Set initial size
+    
     return () => observer.disconnect();
   }, []);
 
@@ -202,36 +196,44 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
     if (!svgRef.current) return;
     const svg = d3.select(svgRef.current);
     const g = svg.select<SVGGElement>(".zoom-group");
+
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 10])
       .on("zoom", (event) => {
         setTransform(event.transform);
         g.attr("transform", event.transform.toString());
       });
+
     svg.call(zoom);
     svg.call(zoom.transform, transform);
-    return () => { svg.on(".zoom", null); };
+
+    return () => { svg.on(".zoom", null); }; // Clean up zoom listener
   }, [transform]);
 
-  const handleNodeClick = useCallback((node: NetworkNode, event: React.MouseEvent) => {
+  // CORRECTED: Using the functional update form `setSelectedNode(currentNode => ...)`
+  // makes this callback more stable by removing `selectedNode` from its dependencies.
+  const handleNodeClick = useCallback((node: NetworkNode, event: React.MouseEvent<SVGCircleElement>) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const newSelectedNode = selectedNode?.id === node.id ? null : node;
-    setSelectedNode(newSelectedNode);
-    if (newSelectedNode) {
-      setDetailsPosition({ x: event.clientX - rect.left, y: event.clientY - rect.top });
-      setShowDetails(true);
-      onIndividualSelect({ 
-        id: node.id, 
-        phoneNumber: node.phoneNumber, 
-        imei: node.imei, 
-        interactions: node.interactions, 
-        details: { type: node.type, size: node.size, location: node.location } 
-      });
-    } else {
-      setShowDetails(false);
-    }
-  }, [selectedNode, onIndividualSelect]);
+
+    setSelectedNode(currentNode => {
+      const newSelectedNode = currentNode?.id === node.id ? null : node;
+      if (newSelectedNode) {
+        setDetailsPosition({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+        setShowDetails(true);
+        onIndividualSelect({ 
+          id: node.id, 
+          phoneNumber: node.phoneNumber, 
+          imei: node.imei, 
+          interactions: node.interactions, 
+          details: { type: node.type, size: node.size, location: node.location } 
+        });
+      } else {
+        setShowDetails(false);
+      }
+      return newSelectedNode;
+    });
+  }, [onIndividualSelect]);
 
   const connectedNodeIds = useMemo(() => {
     if (!selectedNode) return new Set<string>();
@@ -245,7 +247,7 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
     return connected;
   }, [selectedNode, visibleEdges]);
   
-  // Control functions
+  // Control functions are memoized for stability
   const resetZoom = useCallback(() => { 
     if (svgRef.current) 
       d3.select(svgRef.current)
@@ -279,7 +281,7 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
 
   if (networkData.nodes.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 to-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+      <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
         <div className="text-center p-8">
           <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-2xl flex items-center justify-center">
             <Network className="w-12 h-12 text-blue-600 dark:text-blue-400" />
@@ -372,7 +374,6 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
       <div ref={containerRef} className="flex-1 relative min-h-0 w-full overflow-hidden">
         {dimensions.width > 0 && dimensions.height > 0 && (
           <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="w-full h-full cursor-grab active:cursor-grabbing">
-            {/* Enhanced SVG Defs */}
             <defs>
               <linearGradient id="primaryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#3B82F6" />
@@ -403,14 +404,6 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
                   <feMergeNode in="SourceGraphic"/>
                 </feMerge>
               </filter>
-              {/* Patterns for multi-degree links */}
-              <pattern id="secondaryPattern" patternUnits="userSpaceOnUse" width="8" height="8">
-                <rect width="8" height="8" fill="#f59e0b" opacity="0.3"/>
-                <rect width="4" height="4" fill="#f59e0b" opacity="0.6"/>
-              </pattern>
-              <pattern id="tertiaryPattern" patternUnits="userSpaceOnUse" width="6" height="6">
-                <circle cx="3" cy="3" r="1" fill="#6b7280" opacity="0.5"/>
-              </pattern>
             </defs>
             <g className="zoom-group">
               {/* Enhanced Edges with Multi-Degree Support */}
@@ -422,7 +415,6 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
                   const isHovered = hoveredEdgeId === edge.id;
                   const isDimmed = selectedNode && !isHighlighted;
                   
-                  // Enhanced edge styling based on degree and classification
                   const edgeColor = edge.degree 
                     ? getMultiDegreeLinkColor(edge.degree as 1 | 2 | 3)
                     : (edge.linkStrength?.classification === 'primary' ? '#ef4444' : 
@@ -438,10 +430,6 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
                     <g key={edge.id}>
                       <line 
                         className="edge" 
-                        x1={sourceNode.x || 0} 
-                        y1={sourceNode.y || 0} 
-                        x2={targetNode.x || 0} 
-                        y2={targetNode.y || 0} 
                         stroke={isHighlighted ? "#fbbf24" : edgeColor} 
                         strokeWidth={isHighlighted ? edgeWidth + 2 : edgeWidth} 
                         strokeDasharray={strokeDasharray}
@@ -455,47 +443,6 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
                         onMouseEnter={() => setHoveredEdgeId(edge.id)} 
                         onMouseLeave={() => setHoveredEdgeId(null)} 
                       />
-                      {isHovered && (
-                        <g style={{ pointerEvents: 'none' }}>
-                           <rect 
-                             x={((sourceNode.x || 0) + (targetNode.x || 0)) / 2 - 45} 
-                             y={((sourceNode.y || 0) + (targetNode.y || 0)) / 2 - 30} 
-                             width="90" 
-                             height="25" 
-                             fill="rgba(0,0,0,0.8)" 
-                             rx="4"
-                           />
-                           <text 
-                             x={((sourceNode.x || 0) + (targetNode.x || 0)) / 2} 
-                             y={((sourceNode.y || 0) + (targetNode.y || 0)) / 2 - 18} 
-                             textAnchor="middle" 
-                             fontSize="9px" 
-                             fill="white"
-                           >
-                             {edge.degree === 1 ? 'Direct' : edge.degree === 2 ? '2nd Degree' : '3rd Degree'}
-                           </text>
-                           <text 
-                             x={((sourceNode.x || 0) + (targetNode.x || 0)) / 2} 
-                             y={((sourceNode.y || 0) + (targetNode.y || 0)) / 2 - 8} 
-                             textAnchor="middle" 
-                             fontSize="9px" 
-                             fill="white"
-                           >
-                             Strength: {edge.linkStrength?.strengthScore || 0}%
-                           </text>
-                           {edge.degree && edge.degree > 1 && edge.path && (
-                             <text 
-                               x={((sourceNode.x || 0) + (targetNode.x || 0)) / 2} 
-                               y={((sourceNode.y || 0) + (targetNode.y || 0)) / 2 + 2} 
-                               textAnchor="middle" 
-                               fontSize="8px" 
-                               fill="#fbbf24"
-                             >
-                               Path: {edge.path.length - 2} intermediate{edge.path.length - 2 !== 1 ? 's' : ''}
-                             </text>
-                           )}
-                        </g>
-                      )}
                     </g>
                   );
                 })}
@@ -514,27 +461,16 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
                     <g key={node.id} className="node-group">
                       {isSelected && (
                         <circle 
-                          cx={node.x || 0} 
-                          cy={node.y || 0} 
                           r={node.size / 2 + 8} 
                           fill="none" 
                           stroke="#fbbf24" 
                           strokeWidth="3" 
                           opacity="0.8" 
-                          className="animate-pulse" 
+                          className="animate-pulse node" // Added .node class for D3 selection
                         />
                       )}
                       <circle 
-                        cx={node.x || 0} 
-                        cy={node.y || 0} 
-                        r={node.size / 2} 
-                        fill="rgba(0,0,0,0.1)" 
-                        transform="translate(2,2)" 
-                      />
-                      <circle 
                         className="node" 
-                        cx={node.x || 0} 
-                        cy={node.y || 0} 
                         r={node.size / 2} 
                         fill={`url(#${gradientId})`} 
                         stroke="white" 
@@ -545,15 +481,14 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
                           transition: 'all 0.3s ease', 
                           filter: isSelected || isHovered ? 'url(#shadow)' : 'none' 
                         }} 
-                        onClick={(e) => handleNodeClick(node, e as any)} 
+                        // CORRECTED: Using the stable callback and providing the correct event type.
+                        onClick={(e: React.MouseEvent<SVGCircleElement>) => handleNodeClick(node, e)} 
                         onMouseEnter={() => setHoveredNodeId(node.id)} 
                         onMouseLeave={() => setHoveredNodeId(null)} 
                       />
                       {(isHovered || isSelected) && (
                         <text 
                           className="node-label" 
-                          x={node.x || 0} 
-                          y={(node.y || 0) + node.size / 2 + 20} 
                           textAnchor="middle" 
                           fontSize="12px" 
                           fill="white" 
@@ -565,20 +500,6 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
                         >
                           {node.phoneNumber}
                         </text>
-                      )}
-                      {node.interactions > 10 && !isDimmed && (
-                        <g transform={`translate(${(node.x || 0) + node.size / 2 - 8}, ${(node.y || 0) - node.size / 2 + 8})`}>
-                          <circle r="10" fill="#ef4444" />
-                          <text 
-                            textAnchor="middle" 
-                            y="4" 
-                            fontSize="8px" 
-                            fill="white" 
-                            fontWeight="bold"
-                          >
-                            {node.interactions > 99 ? '99+' : node.interactions}
-                          </text>
-                        </g>
                       )}
                     </g>
                   );
