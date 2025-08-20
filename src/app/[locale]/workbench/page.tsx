@@ -73,7 +73,6 @@ const [filters, setFilters] = useState<WorkbenchFilters>({
   minInteractions: 0,
   contactWhitelist: [],
   durationRange: { min: 0, max: 3600 },
-  // Add the missing filter properties that NetworkGraph expects
   linkTypes: ['primary', 'secondary', 'weak'],
   minStrengthScore: 0,
   showWeakLinks: true,
