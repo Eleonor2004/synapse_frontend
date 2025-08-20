@@ -27,19 +27,17 @@ interface EnhancedNetworkGraphProps {
   onIndividualSelect: (individual: Individual) => void;
 }
 
-// Helper function to safely get node ID
+// Helper functions remain the same
 const getNodeId = (node: NetworkNode | string | undefined | null): string => {
   if (!node) return '';
   return typeof node === 'string' ? node : (node.id || '');
 };
 
-// Helper function to safely get edge source/target
 const getEdgeNodeId = (node: NetworkNode | string | undefined | null): string => {
   if (!node) return '';
   return typeof node === 'object' ? (node.id || '') : String(node);
 };
 
-// Safe node validation
 const isValidNode = (node: any): node is NetworkNode => {
   return node && 
          typeof node === 'object' && 
@@ -48,7 +46,6 @@ const isValidNode = (node: any): node is NetworkNode => {
          typeof node.phoneNumber === 'string';
 };
 
-// Safe edge validation  
 const isValidEdge = (edge: any): edge is EnhancedNetworkEdge => {
   return edge && 
          typeof edge === 'object' && 
@@ -66,6 +63,9 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const simulationRef = useRef<d3.Simulation<NetworkNode, EnhancedNetworkEdge> | null>(null);
+  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+  const isInitializedRef = useRef(false);
+  const cleanupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [selectedNode, setSelectedNode] = useState<NetworkNode | null>(null);
@@ -136,7 +136,6 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
       );
     }
 
-    // If there are edges, ensure we only show connected nodes
     if (processedEdges && processedEdges.length > 0) {
       const connectedNodeIds = new Set<string>();
       processedEdges.forEach(edge => {
@@ -195,41 +194,179 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
     };
   }, [visibleEdges, networkData?.stats]);
 
-  // Clean up simulation when component unmounts or data changes
+  // CRITICAL: Comprehensive cleanup function
   const cleanupSimulation = useCallback(() => {
+    // Clear any pending timeouts
+    if (cleanupTimeoutRef.current) {
+      clearTimeout(cleanupTimeoutRef.current);
+      cleanupTimeoutRef.current = null;
+    }
+
+    // Stop simulation
     if (simulationRef.current) {
       simulationRef.current.stop();
       simulationRef.current = null;
     }
+
+    // Clean up zoom behavior
+    if (zoomRef.current && svgRef.current) {
+      try {
+        d3.select(svgRef.current).on('.zoom', null);
+        zoomRef.current = null;
+      } catch (error) {
+        console.warn('Error cleaning up zoom:', error);
+      }
+    }
+
+    // Clear SVG content ONLY if the element exists and has content
+    if (svgRef.current) {
+      try {
+        const svg = d3.select(svgRef.current);
+        if (!svg.empty()) {
+          svg.selectAll('*').remove();
+        }
+      } catch (error) {
+        console.warn('Error clearing SVG content:', error);
+      }
+    }
+
     setIsSimulationRunning(false);
+    isInitializedRef.current = false;
   }, []);
 
-  // D3 Force Simulation Setup with enhanced error handling
+  // Handle container resize with debouncing
   useEffect(() => {
-    if (!svgRef.current || !visibleNodes || visibleNodes.length === 0 || !visibleEdges) {
+    const handleResize = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          setDimensions({ width: rect.width, height: rect.height });
+        }
+      }
+    };
+
+    const debouncedResize = debounce(handleResize, 100);
+    
+    const observer = new ResizeObserver(debouncedResize);
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+      handleResize();
+    }
+
+    return () => {
+      observer.disconnect();
+      debouncedResize.cancel();
+    };
+  }, []);
+
+  // Node click handler
+  const handleNodeClick = useCallback((node: NetworkNode, event: MouseEvent) => {
+    if (!node || !containerRef.current) return;
+    
+    try {
+      const rect = containerRef.current.getBoundingClientRect();
+      const newSelectedNode = selectedNode?.id === node.id ? null : node;
+      setSelectedNode(newSelectedNode);
+      
+      if (newSelectedNode) {
+        setDetailsPosition({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+        setShowDetails(true);
+        onIndividualSelect({
+          id: node.id,
+          phoneNumber: node.phoneNumber || '',
+          imei: node.imei,
+          interactions: node.interactions || 0,
+          details: { 
+            type: node.type || 'unknown', 
+            size: node.size || 20, 
+            location: node.location 
+          }
+        });
+      } else {
+        setShowDetails(false);
+      }
+    } catch (error) {
+      console.error('Error handling node click:', error);
+    }
+  }, [selectedNode, onIndividualSelect]);
+
+  // Main D3 visualization effect
+  useEffect(() => {
+    // Early exit conditions
+    if (!svgRef.current || !containerRef.current || !visibleNodes || visibleNodes.length === 0) {
       cleanupSimulation();
       return;
     }
 
+    // Prevent re-initialization during the same render cycle
+    if (dimensions.width <= 0 || dimensions.height <= 0) {
+      return;
+    }
+
+    // Clean up previous simulation
+    cleanupSimulation();
+    
+    // Set running state
     setIsSimulationRunning(true);
-    cleanupSimulation(); // Clean up previous simulation
+
+    // Add a small delay to ensure DOM is ready
+    cleanupTimeoutRef.current = setTimeout(() => {
+      if (!svgRef.current || !containerRef.current) {
+        setIsSimulationRunning(false);
+        return;
+      }
+
+      try {
+        initializeVisualization();
+      } catch (error) {
+        console.error('Error initializing visualization:', error);
+        setIsSimulationRunning(false);
+      }
+    }, 10);
+
+    return cleanupSimulation;
+  }, [visibleNodes, visibleEdges, dimensions, cleanupSimulation]);
+
+  // Separate initialization function to reduce complexity
+  const initializeVisualization = () => {
+    if (!svgRef.current || !visibleNodes || visibleNodes.length === 0) return;
 
     const svg = d3.select(svgRef.current);
     const width = dimensions.width;
     const height = dimensions.height;
 
-    // Clear existing content safely
-    try {
-      svg.selectAll("*").remove();
-    } catch (error) {
-      console.warn('Error clearing SVG content:', error);
-    }
-
     // Create main group for zoom transforms
     const zoomGroup = svg.append("g").attr("class", "zoom-group");
 
+    // Add gradients and filters
+    const defs = svg.append("defs");
+    
+    // Primary gradient
+    const primaryGradient = defs.append("linearGradient")
+      .attr("id", "primaryGradient")
+      .attr("x1", "0%").attr("y1", "0%")
+      .attr("x2", "100%").attr("y2", "100%");
+    primaryGradient.append("stop").attr("offset", "0%").attr("stop-color", "#3B82F6");
+    primaryGradient.append("stop").attr("offset", "100%").attr("stop-color", "#1D4ED8");
+
+    // Secondary gradient
+    const secondaryGradient = defs.append("linearGradient")
+      .attr("id", "secondaryGradient")
+      .attr("x1", "0%").attr("y1", "0%")
+      .attr("x2", "100%").attr("y2", "100%");
+    secondaryGradient.append("stop").attr("offset", "0%").attr("stop-color", "#10B981");
+    secondaryGradient.append("stop").attr("offset", "100%").attr("stop-color", "#047857");
+
+    // Service gradient
+    const serviceGradient = defs.append("linearGradient")
+      .attr("id", "serviceGradient")
+      .attr("x1", "0%").attr("y1", "0%")
+      .attr("x2", "100%").attr("y2", "100%");
+    serviceGradient.append("stop").attr("offset", "0%").attr("stop-color", "#F59E0B");
+    serviceGradient.append("stop").attr("offset", "100%").attr("stop-color", "#D97706");
+
     // Create a safe copy of nodes with required properties
-    const simulationNodes = visibleNodes.map(node => ({
+    const simulationNodes: NetworkNode[] = visibleNodes.map(node => ({
       ...node,
       x: node.x || width / 2 + (Math.random() - 0.5) * 100,
       y: node.y || height / 2 + (Math.random() - 0.5) * 100,
@@ -237,13 +374,12 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
       vy: 0
     }));
 
+    // Create simulation
     const simulation = d3.forceSimulation<NetworkNode>(simulationNodes)
       .force("link", d3.forceLink<NetworkNode, EnhancedNetworkEdge>(visibleEdges)
         .id(d => d.id || '')
         .distance(d => {
           const baseDistance = Math.min(120, 40 + (d.width || 1) * 5);
-          
-          // Adjust distance based on connection degree
           let degreeMultiplier = 1;
           if (d.degree === 1) degreeMultiplier = 0.7;
           else if (d.degree === 2) degreeMultiplier = 1.2;
@@ -275,9 +411,8 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
 
     simulationRef.current = simulation;
 
-    // Create edges group
+    // Create groups
     const edgesGroup = zoomGroup.append("g").attr("class", "edges");
-    // Create nodes group  
     const nodesGroup = zoomGroup.append("g").attr("class", "nodes");
 
     // Draw edges
@@ -286,8 +421,14 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
       .enter()
       .append("line")
       .attr("class", "edge")
-      .attr("stroke", d => getMultiDegreeLinkColor ? getMultiDegreeLinkColor(d.degree || 1) : '#999')
-      .attr("stroke-width", d => getMultiDegreeLinkWidth ? getMultiDegreeLinkWidth(d.degree || 1, d.width || 2) : 2)
+      .attr("stroke", d => {
+        const color = getMultiDegreeLinkColor?.(d.degree || 1) || '#999';
+        return color;
+      })
+      .attr("stroke-width", d => {
+        const width = getMultiDegreeLinkWidth?.(d.degree || 1, d.width || 2) || 2;
+        return width;
+      })
       .attr("stroke-opacity", 0.6)
       .attr("stroke-dasharray", d => d.degree === 2 ? "5,5" : d.degree === 3 ? "3,3" : "none");
 
@@ -337,22 +478,10 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
     simulation.on("tick", () => {
       try {
         edgeElements
-          .attr("x1", d => {
-            const source = d.source as NetworkNode;
-            return source?.x || 0;
-          })
-          .attr("y1", d => {
-            const source = d.source as NetworkNode;
-            return source?.y || 0;
-          })
-          .attr("x2", d => {
-            const target = d.target as NetworkNode;
-            return target?.x || 0;
-          })
-          .attr("y2", d => {
-            const target = d.target as NetworkNode;
-            return target?.y || 0;
-          });
+          .attr("x1", d => (d.source as NetworkNode)?.x || 0)
+          .attr("y1", d => (d.source as NetworkNode)?.y || 0)
+          .attr("x2", d => (d.target as NetworkNode)?.x || 0)
+          .attr("y2", d => (d.target as NetworkNode)?.y || 0);
         
         nodeElements
           .attr("cx", d => d.x || 0)
@@ -368,44 +497,13 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
 
     simulation.on("end", () => setIsSimulationRunning(false));
 
-    return cleanupSimulation;
-  }, [visibleNodes, visibleEdges, dimensions, cleanupSimulation]);
-
-  // Handle container resize
-  useEffect(() => {
-    const handleResize = () => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          setDimensions({ width: rect.width, height: rect.height });
-        }
-      }
-    };
-
-    const observer = new ResizeObserver(handleResize);
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-      handleResize();
-    }
-
-    return () => observer.disconnect();
-  }, []);
-
-  // Zoom functionality
-  useEffect(() => {
-    if (!svgRef.current) return;
-    
-    const svg = d3.select(svgRef.current);
-    const g = svg.select<SVGGElement>(".zoom-group");
-    
-    if (g.empty()) return; // Guard against missing zoom group
-    
+    // Setup zoom
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 10])
       .on("zoom", (event) => {
         try {
           setTransform(event.transform);
-          g.attr("transform", event.transform.toString());
+          zoomGroup.attr("transform", event.transform.toString());
         } catch (error) {
           console.warn('Error during zoom:', error);
         }
@@ -413,45 +511,10 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
 
     svg.call(zoom);
     svg.call(zoom.transform, transform);
+    zoomRef.current = zoom;
 
-    return () => { 
-      try {
-        svg.on(".zoom", null);
-      } catch (error) {
-        console.warn('Error cleaning up zoom:', error);
-      }
-    };
-  }, [transform, dimensions]);
-
-  const handleNodeClick = useCallback((node: NetworkNode, event: React.MouseEvent) => {
-    if (!node || !containerRef.current) return;
-    
-    try {
-      const rect = containerRef.current.getBoundingClientRect();
-      const newSelectedNode = selectedNode?.id === node.id ? null : node;
-      setSelectedNode(newSelectedNode);
-      
-      if (newSelectedNode) {
-        setDetailsPosition({ x: event.clientX - rect.left, y: event.clientY - rect.top });
-        setShowDetails(true);
-        onIndividualSelect({
-          id: node.id,
-          phoneNumber: node.phoneNumber || '',
-          imei: node.imei,
-          interactions: node.interactions || 0,
-          details: { 
-            type: node.type || 'unknown', 
-            size: node.size || 20, 
-            location: node.location 
-          }
-        });
-      } else {
-        setShowDetails(false);
-      }
-    } catch (error) {
-      console.error('Error handling node click:', error);
-    }
-  }, [selectedNode, onIndividualSelect]);
+    isInitializedRef.current = true;
+  };
 
   const connectedNodeIds = useMemo(() => {
     if (!selectedNode || !visibleEdges) return new Set<string>();
@@ -469,12 +532,12 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
 
   // Control functions
   const resetZoom = useCallback(() => {
-    if (svgRef.current) {
+    if (svgRef.current && zoomRef.current) {
       try {
         d3.select(svgRef.current)
           .transition()
           .duration(750)
-          .call(d3.zoom<SVGSVGElement, unknown>().transform, d3.zoomIdentity);
+          .call(zoomRef.current.transform, d3.zoomIdentity);
       } catch (error) {
         console.warn('Error resetting zoom:', error);
       }
@@ -482,12 +545,12 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
   }, []);
 
   const zoomIn = useCallback(() => {
-    if (svgRef.current) {
+    if (svgRef.current && zoomRef.current) {
       try {
         d3.select(svgRef.current)
           .transition()
           .duration(300)
-          .call(d3.zoom<SVGSVGElement, unknown>().scaleBy, 1.5);
+          .call(zoomRef.current.scaleBy, 1.5);
       } catch (error) {
         console.warn('Error zooming in:', error);
       }
@@ -495,12 +558,12 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
   }, []);
 
   const zoomOut = useCallback(() => {
-    if (svgRef.current) {
+    if (svgRef.current && zoomRef.current) {
       try {
         d3.select(svgRef.current)
           .transition()
           .duration(300)
-          .call(d3.zoom<SVGSVGElement, unknown>().scaleBy, 1 / 1.5);
+          .call(zoomRef.current.scaleBy, 1 / 1.5);
       } catch (error) {
         console.warn('Error zooming out:', error);
       }
@@ -614,46 +677,7 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
       <div ref={containerRef} className="flex-1 relative min-h-0 w-full overflow-hidden">
         {dimensions.width > 0 && dimensions.height > 0 && (
           <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="w-full h-full cursor-grab active:cursor-grabbing">
-            {/* Enhanced SVG Defs */}
-            <defs>
-              <linearGradient id="primaryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#3B82F6" />
-                <stop offset="100%" stopColor="#1D4ED8" />
-              </linearGradient>
-              <linearGradient id="secondaryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#10B981" />
-                <stop offset="100%" stopColor="#047857" />
-              </linearGradient>
-              <linearGradient id="serviceGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#F59E0B" />
-                <stop offset="100%" stopColor="#D97706" />
-              </linearGradient>
-              <filter id="shadow">
-                <feDropShadow dx="2" dy="2" stdDeviation="3" floodOpacity="0.3"/>
-              </filter>
-              <filter id="linkGlow">
-                <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-                <feMerge>
-                  <feMergeNode in="coloredBlur"/>
-                  <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-              </filter>
-              <filter id="multiDegreeGlow">
-                <feGaussianBlur stdDeviation="1" result="coloredBlur"/>
-                <feMerge>
-                  <feMergeNode in="coloredBlur"/>
-                  <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-              </filter>
-              <pattern id="secondaryPattern" patternUnits="userSpaceOnUse" width="8" height="8">
-                <rect width="8" height="8" fill="#f59e0b" opacity="0.3"/>
-                <rect width="4" height="4" fill="#f59e0b" opacity="0.6"/>
-              </pattern>
-              <pattern id="tertiaryPattern" patternUnits="userSpaceOnUse" width="6" height="6">
-                <circle cx="3" cy="3" r="1" fill="#6b7280" opacity="0.5"/>
-              </pattern>
-            </defs>
-            {/* Main group will be created by D3 */}
+            {/* SVG content will be managed by D3 */}
           </svg>
         )}
         
@@ -736,3 +760,22 @@ export const EnhancedNetworkGraph: React.FC<EnhancedNetworkGraphProps> = ({
     </div>
   );
 };
+
+// Utility function for debouncing
+function debounce<T extends (...args: any[]) => any>(func: T, wait: number) {
+  let timeout: NodeJS.Timeout | null = null;
+  
+  const debounced = (...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(null, args), wait);
+  };
+  
+  debounced.cancel = () => {
+    if (timeout) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
+  };
+  
+  return debounced;
+}
